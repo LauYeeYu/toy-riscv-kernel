@@ -87,3 +87,6 @@ qemu: $K/kernel
 qemu-gdb: $K/kernel .gdbinit
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
+
+launch-gdb:
+	$(TOOLPREFIX)gdb -ex 'file kernel/kernel' -ex 'set arch riscv:rv64' -ex 'target remote localhost:26000'
