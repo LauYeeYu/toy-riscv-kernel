@@ -40,6 +40,8 @@ SECTIONS
         *(.sbss .sbss.*) /* do not need to distinguish this from .bss */
         . = ALIGN(16);
         *(.bss .bss.*)
+        . = ALIGN(0x1000);
+        *(.kernel_end)
     }
 
     PROVIDE(end = .);

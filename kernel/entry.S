@@ -13,9 +13,20 @@ _entry:
 spin:
     j spin
 
+# get the kernel end address
+    .section .text
+    .global get_kernel_end
+get_kernel_end:
+    la a0, kernel_end
+    ret
+
     .section .bss.stack
     .global stack_bottom
 stack_bottom:
     .space 4096 * 16 # 64KiB
     .global stack_top
 stack_top:
+
+    .section .kernel_end
+    .global kernel_end
+kernel_end:
