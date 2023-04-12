@@ -4,6 +4,6 @@
 #include "types.h"
 
 void print_string(const char *str);
-void print_int(uint64 x);
+void print_int(uint64 x, int base);
 
 #endif //TOY_RISCV_KERNEL_KERNEL_PRINT_H

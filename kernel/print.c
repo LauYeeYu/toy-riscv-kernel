@@ -17,20 +17,48 @@ void print_string(const char *str) {
     release(&lock);
 }
 
-void print_int(uint64 x) {
-    acquire(&lock);
+void print_int_dec(uint64 x) {
     if (x == 0) {
         uart_putc_sync('0');
     } else {
-        char buf[16];
-        int i = 0;
-        while (x > 0) {
-            buf[i++] = '0' + x % 10;
-            x /= 10;
+        if (x >= 10) {
+            print_int_dec(x / 10);
         }
-        while (i > 0) {
-            uart_putc_sync(buf[--i]);
+        uart_putc_sync('0' + x % 10);
+    }
+}
+
+void print_int_hex_without_header(uint64 x) {
+    if (x == 0) {
+        uart_putc_sync('0');
+    } else {
+        if (x >= 16) {
+            print_int_hex_without_header(x / 16);
         }
+        int digit = x % 16;
+        if (digit < 10) {
+            uart_putc_sync('0' + digit);
+        } else {
+            uart_putc_sync('a' + digit - 10);
+        }
+    }
+}
+
+void print_int(uint64 x, int base) {
+    acquire(&lock);
+    switch (base) {
+        case 10:
+            print_int_dec(x);
+            break;
+        case 16:
+            uart_putc_sync('0');
+            uart_putc_sync('x');
+            print_int_hex_without_header(x);
+            break;
+        default:
+            print_string("print_int: unsupported base: ");
+            print_int(base, 10);
+            break;
     }
     release(&lock);
 }
