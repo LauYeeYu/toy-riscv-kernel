@@ -68,7 +68,7 @@ $K/kernel: $(OBJS) $K/kernel.ld
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*/*.o */*.d */*.asm */*.sym
+	*/*.o */*.d */*.asm */*.sym kernel/kernel
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
