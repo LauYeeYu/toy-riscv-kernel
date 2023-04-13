@@ -2,6 +2,7 @@
 #define TOY_RISCV_KERNEL_KERNEL_MEM_MANAGE_H
 
 #include "types.h"
+#include "defs.h"
 
 /**
  * initialize the memory management
@@ -21,5 +22,16 @@ void *allocate(size_t power);
  * @param power the power of 2
  */
 void deallocate(void *addr, size_t power);
+
+#ifdef PRINT_BUDDY_DETAIL
+/**
+ * print the buddy pool
+ */
+void print_buddy_pool();
+#endif // PRINT_BUDDY_DETAIL
+
+#ifdef TOY_RISCV_KERNEL_TEST_MEM_MANAGE
+void test_mem_manage();
+#endif // TOY_RISCV_KERNEL_TEST_MEM_MANAGE
 
 #endif //TOY_RISCV_KERNEL_KERNEL_MEM_MANAGE_H

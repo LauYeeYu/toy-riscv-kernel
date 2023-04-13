@@ -7,6 +7,7 @@
 
 #include "print.h"
 #include "types.h"
+#include "defs.h"
 
 // In entry.S
 size_t get_kernel_end();
@@ -55,6 +56,7 @@ void init_mem_manage() {
         buddy_pool.space[i].next = NULL;
     }
 #ifdef PRINT_BUDDY_DETAIL
+    print_string("\n");
     print_buddy_pool();
 #endif // PRINT_BUDDY_DETAIL
 }
@@ -93,6 +95,10 @@ inline void *remove_tag(void *addr, size_t power) {
 }
 
 void deallocate(void *addr, size_t power) {
+    // Do nothing if the address is NULL
+    if (addr == NULL) {
+        return;
+    }
     // Find the place
     if (!buddy_pool.space[power].next) { // null, no block
         buddy_pool.space[power].next = addr;
@@ -149,7 +155,7 @@ void deallocate(void *addr, size_t power) {
 
 #ifdef PRINT_BUDDY_DETAIL
 void print_buddy_pool() {
-    print_string("\nBUDDY POOL:\n");
+    print_string("BUDDY POOL:\n");
     for (int i = 0; i <= BUDDY_MAX_ORDER; i++) {
         node *p = buddy_pool.space[i].next;
         print_string(capacity[i]);
@@ -163,3 +169,34 @@ void print_buddy_pool() {
     }
 }
 #endif // PRINT_BUDDY_DETAIL
+
+#ifdef TOY_RISCV_KERNEL_TEST_MEM_MANAGE
+void test_mem_manage() {
+    const int max_power = 5;
+    const int times = 2;
+    void *addr[max_power * times];
+    for (int i = 0; i < max_power; i++) {
+        for (int j = 0; j < times; j++) {
+            addr[times * i + j] = allocate(i);
+            print_string("Get ");
+            print_int((size_t)addr[2 * i + j], 16);
+            print_string("-");
+            print_int((size_t)addr[2 * i + j] + (PAGE_SIZE << i) - 1, 16);
+            print_string("\n");
+            print_buddy_pool();
+        }
+    }
+
+    for (int i = max_power - 1; i >= 0; i--) {
+        for (int j = times - 1; j >= 0; j--) {
+            deallocate(addr[times * i + j], i);
+            print_string("Free ");
+            print_int((size_t)addr[2 * i + j], 16);
+            print_string("-");
+            print_int((size_t)addr[2 * i + j] + (PAGE_SIZE << i) - 1, 16);
+            print_string("\n");
+            print_buddy_pool();
+        }
+    }
+}
+#endif // TOY_RISCV_KERNEL_TEST_MEM_MANAGE

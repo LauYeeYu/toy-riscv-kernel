@@ -6,9 +6,9 @@ OBJS = \
   $K/start.o \
   $K/print.o \
   $K/uart.o \
-  $K/spinlock.o \
   $K/main.o \
-  $K/mem_manage.o
+  $K/mem_manage.o \
+  $K/test.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
