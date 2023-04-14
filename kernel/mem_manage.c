@@ -34,6 +34,7 @@ struct buddy_pool {
     node space[BUDDY_MAX_ORDER + 1];
 } buddy_pool;
 
+
 #ifdef PRINT_BUDDY_DETAIL
 void print_buddy_pool();
 #endif // PRINT_BUDDY_DETAIL
@@ -51,9 +52,19 @@ void init_mem_manage() {
         buddy_size >>= 1;
         index--;
     }
-    /* This can be optimized by add the rest of the space to the buddy_pool */
-    for (int i = index; i >= 0; i--) {
-        buddy_pool.space[i].next = NULL;
+
+    void *tmp = (void *)(KERNEL_START + buddy_size);
+    while (index >= 0) {
+        if ((size_t)tmp >= start_addr) { // available
+            buddy_pool.space[index].next = tmp;
+            buddy_pool.space[index].next->next = NULL;
+            index--;
+            tmp = (void *)((size_t)tmp - (PAGE_SIZE << index));
+        } else {
+            buddy_pool.space[index].next = NULL;
+            index--;
+            tmp = (void *)((size_t)tmp + (PAGE_SIZE << index));
+        }
     }
 #ifdef PRINT_BUDDY_DETAIL
     print_string("\n");
