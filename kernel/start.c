@@ -13,7 +13,7 @@ void start() {
     uart_init();
     print_string("Entering kernel...\n");
 
-    // Set up an identically-mapping page table. (all huge pages)
+    // Set up an identically-mapping page table. (using huge pages)
     print_string("Establishing page table... ");
     establish_page_table();
     print_string("Done.\n");
@@ -42,7 +42,7 @@ void start() {
     // Set the page table.
     write_satp(((uint64)kernel_pagetable >> 12) | SATP_SV39);
     // Enable paging.
-    write_sstatus(read_sstatus() | SSTATUS_SPP | SSTATUS_SIE);
+    write_sstatus((read_sstatus() | SSTATUS_SPP) & ~SSTATUS_SIE);
     print_string("Done.\n");
 
     write_mepc((uint64)main);
