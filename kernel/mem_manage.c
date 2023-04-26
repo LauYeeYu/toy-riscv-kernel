@@ -26,6 +26,7 @@ const char *capacity[BUDDY_MAX_ORDER + 1] = {
 };
 #endif // PRINT_BUDDY_DETAIL
 
+/** Buddy pool */
 typedef struct node {
     struct node *next;
 } node;
@@ -211,3 +212,108 @@ void test_mem_manage() {
     }
 }
 #endif // TOY_RISCV_KERNEL_TEST_MEM_MANAGE
+
+/** 
+ * Useful tools for kernel memory management, especially for small blocks of
+ * data.
+ */
+
+struct block_meta {
+    size_t power;
+    size_t count;
+    void *free; // the start address of the free space
+    struct block_meta *next;
+    struct block_meta *prev;
+};
+
+struct block_meta *block_list_head = NULL;
+struct block_meta *block_list_tail = NULL;
+
+inline size_t remained_size(struct block_meta *block) {
+    return (PAGE_SIZE << block->power) - (size_t)(block->free);
+}
+ 
+struct header {
+    size_t size;
+    struct block_meta *block;
+};
+
+inline size_t align(size_t size) {
+    return (size + 7) & ~7;
+}
+
+inline size_t gross_size(size_t size) {
+    return align(size) + sizeof(struct header);
+}
+
+inline int tail_not_enough(size_t size) {
+    if (block_list_tail == NULL) return 1;
+    else return remained_size(block_list_tail) < gross_size(size);
+}
+
+// Init the block and return its block_meta
+static void *init_block(void *block, size_t power) {
+    if (block == NULL) return NULL;
+    struct block_meta *block_meta = (struct block_meta *)block;
+    block_meta->power = power;
+    block_meta->count = 0;
+    block_meta->free = (void *)((size_t)block + sizeof(struct block_meta));
+    block_meta->next = NULL;
+    block_meta->prev = NULL;
+    return block_meta;
+}
+
+void *kmalloc(size_t size) {
+    if (tail_not_enough(size)) {
+        // We need to allocate block space
+        size_t need_size = sizeof(struct block_meta) + gross_size(size);
+        size_t power = 0;
+        while ((PAGE_SIZE << power) < need_size) power++;
+        struct block_meta *block = init_block(allocate(power), power);
+        if (block == NULL) return NULL;
+        block->prev = block_list_tail;
+        if (block_list_head == NULL) {
+            block_list_head = block;
+            block_list_tail = block;
+        } else {
+            block_list_tail->next = block;
+            block_list_tail = block;
+        }
+        return kmalloc(size);
+    } else {
+        struct block_meta *block = block_list_tail;
+        struct header *header = block->free;
+        void *ret = (void *)((size_t)header + sizeof(struct header));
+        block->free = (void *)((size_t)block->free + gross_size(size));
+        block->count++;
+        header->size = align(size);
+        header->block = block;
+        return ret;
+    }
+}
+
+void kfree(void *addr) {
+    if (addr == NULL) return;
+    struct header *header = (struct header *)((size_t)addr - sizeof(struct header));
+    struct block_meta *block = header->block;
+    block->count--;
+    if (block->count == 0) {
+        // Free the block
+        if (block == block_list_head) {
+            block_list_head = block->next;
+        }
+        if (block == block_list_tail) {
+            block_list_tail = block->prev;
+        }
+        if (block->prev) {
+            block->prev->next = block->next;
+        }
+        if (block->next) {
+            block->next->prev = block->prev;
+        }
+        deallocate(block, block->power);
+    } else if ((size_t)(block->free) == (size_t)addr + header->size) {
+        // When the free space is at the end of the block
+        block->free = addr - sizeof(struct header);
+    }
+}
