@@ -6,6 +6,7 @@
 #include "mem_manage.h"
 
 #include "print.h"
+#include "riscv.h"
 #include "types.h"
 #include "defs.h"
 
@@ -74,6 +75,7 @@ void init_mem_manage() {
 }
 
 void *allocate(size_t power) {
+    int old_interrupt_status = set_interrupt_status(0);
     void *addr = NULL;
     size_t level = power;
 
@@ -86,6 +88,7 @@ void *allocate(size_t power) {
         }
         level++;
     }
+    set_interrupt_status(old_interrupt_status);
 
     // No available block
     if (addr == NULL || level > BUDDY_MAX_ORDER) {
@@ -111,10 +114,13 @@ void deallocate(void *addr, size_t power) {
     if (addr == NULL) {
         return;
     }
+
+    int old_interrupt_status = set_interrupt_status(0);
     // Find the place
     if (!buddy_pool.space[power].next) { // null, no block
         buddy_pool.space[power].next = addr;
         *(size_t *)addr = NULL;
+        set_interrupt_status(old_interrupt_status);
         return;
     }
     size_t odd = (size_t)addr & (PAGE_SIZE << power);
@@ -163,6 +169,7 @@ void deallocate(void *addr, size_t power) {
             prev->next = addr;
         }
     }
+    set_interrupt_status(old_interrupt_status);
 }
 
 #ifdef PRINT_BUDDY_DETAIL
@@ -264,6 +271,7 @@ static void *init_block(void *block, size_t power) {
 }
 
 void *kmalloc(size_t size) {
+    int old_interrupt_status = set_interrupt_status(0);
     if (tail_not_enough(size)) {
         // We need to allocate block space
         size_t need_size = sizeof(struct block_meta) + gross_size(size);
@@ -277,8 +285,10 @@ void *kmalloc(size_t size) {
             block_list_tail = block;
         } else {
             block_list_tail->next = block;
+            block->prev = block_list_tail;
             block_list_tail = block;
         }
+        set_interrupt_status(old_interrupt_status);
         return kmalloc(size);
     } else {
         struct block_meta *block = block_list_tail;
@@ -288,12 +298,14 @@ void *kmalloc(size_t size) {
         block->count++;
         header->size = align(size);
         header->block = block;
+        set_interrupt_status(old_interrupt_status);
         return ret;
     }
 }
 
 void kfree(void *addr) {
     if (addr == NULL) return;
+    int old_interrupt_status = set_interrupt_status(0);
     struct header *header = (struct header *)((size_t)addr - sizeof(struct header));
     struct block_meta *block = header->block;
     block->count--;
@@ -316,4 +328,5 @@ void kfree(void *addr) {
         // When the free space is at the end of the block
         block->free = addr - sizeof(struct header);
     }
+    set_interrupt_status(old_interrupt_status);
 }
