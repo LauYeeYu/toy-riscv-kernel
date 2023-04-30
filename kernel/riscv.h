@@ -5,15 +5,12 @@
  *   Core information for privileged ISA
  */
 
+#ifndef TOY_RISCV_KERNEL_KERNEL_RISCV_H
+#define TOY_RISCV_KERNEL_KERNEL_RISCV_H
+
+
 #include "types.h"
-
-// Machine Status Register, mstatus
-
-#define MSTATUS_MPP_MASK (3L << 11) // previous mode.
-#define MSTATUS_MPP_M (3L << 11)
-#define MSTATUS_MPP_S (1L << 11)
-#define MSTATUS_MPP_U (0L << 11)
-#define MSTATUS_MIE (1L << 3)    // machine-mode interrupt enable.
+#include "riscv_defs.h"
 
 static inline uint64 read_mstatus() {
     uint64 x;
@@ -31,14 +28,6 @@ static inline void write_mstatus(uint64 x) {
 static inline void write_mepc(uint64 x) {
     asm volatile("csrw mepc, %0" : : "r" (x));
 }
-
-// Supervisor Status Register, sstatus
-
-#define SSTATUS_SPP (1L << 8)  // Previous mode, 1=Supervisor, 0=User
-#define SSTATUS_SPIE (1L << 5) // Supervisor Previous Interrupt Enable
-#define SSTATUS_UPIE (1L << 4) // User Previous Interrupt Enable
-#define SSTATUS_SIE (1L << 1)  // Supervisor Interrupt Enable
-#define SSTATUS_UIE (1L << 0)  // User Interrupt Enable
 
 static inline uint64 read_sstatus() {
     uint64 x;
@@ -61,11 +50,6 @@ static inline void write_sip(uint64 x) {
     asm volatile("csrw sip, %0" : : "r" (x));
 }
 
-// Supervisor Interrupt Enable
-#define SIE_SEIE (1L << 9) // external
-#define SIE_STIE (1L << 5) // timer
-#define SIE_SSIE (1L << 1) // software
-
 static inline uint64 read_sie() {
     uint64 x;
     asm volatile("csrr %0, sie" : "=r" (x) );
@@ -75,11 +59,6 @@ static inline uint64 read_sie() {
 static inline void write_sie(uint64 x) {
     asm volatile("csrw sie, %0" : : "r" (x));
 }
-
-// Machine-mode Interrupt Enable
-#define MIE_MEIE (1L << 11) // external
-#define MIE_MTIE (1L << 7)  // timer
-#define MIE_MSIE (1L << 3)  // software
 
 static inline uint64 read_mie() {
     uint64 x;
@@ -152,11 +131,6 @@ static inline void write_pmpaddr0(uint64 x) {
     asm volatile("csrw pmpaddr0, %0" : : "r" (x));
 }
 
-// use riscv's sv39 page table scheme.
-#define SATP_SV39 (8L << 60)
-
-#define MAKE_SATP(pagetable) (SATP_SV39 | (((uint64)pagetable) >> 12))
-
 // supervisor address translation and protection;
 // holds the address of the page table.
 static inline void write_satp(uint64 x) {
@@ -206,19 +180,27 @@ static inline uint64 read_time() {
 }
 
 // enable device interrupts
-static inline void intread_on() {
+static inline void interrupt_on() {
     write_sstatus(read_sstatus() | SSTATUS_SIE);
 }
 
 // disable device interrupts
-static inline void intread_off() {
+static inline void interrupt_off() {
     write_sstatus(read_sstatus() & ~SSTATUS_SIE);
 }
 
 // are device interrupts enabled?
-static inline int intread_get() {
+static inline int interrupt_status() {
     uint64 x = read_sstatus();
     return (x & SSTATUS_SIE) != 0;
+}
+
+// Set the interrupt status and return the old status.
+static inline int set_interrupt_status(int status) {
+    int last_status = interrupt_status();
+    if (status) interrupt_on();
+    else interrupt_off();
+    return last_status;
 }
 
 static inline uint64 read_sp() {
@@ -255,32 +237,4 @@ static inline void sfence_vma()
 typedef uint64 pte_t;
 typedef uint64 *pagetable_t; // 512 PTEs
 
-#define PGSIZE 4096 // bytes per page
-#define PGSHIFT 12  // bits of offset within a page
-
-#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
-#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
-
-#define PTE_V (1L << 0) // valid
-#define PTE_R (1L << 1)
-#define PTE_W (1L << 2)
-#define PTE_X (1L << 3)
-#define PTE_U (1L << 4) // user can access
-
-// shift a physical address to the right place for a PTE.
-#define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
-
-#define PTE2PA(pte) (((pte) >> 10) << 12)
-
-#define PTE_FLAGS(pte) ((pte) & 0x3FF)
-
-// extract the three 9-bit page table indices from a virtual address.
-#define PXMASK          0x1FF // 9 bits
-#define PXSHIFT(level)  (PGSHIFT+(9*(level)))
-#define PX(level, va) ((((uint64) (va)) >> PXSHIFT(level)) & PXMASK)
-
-// one beyond the highest possible virtual address.
-// MAXVA is actually one bit less than the max allowed by
-// Sv39, to avoid having to sign-extend virtual addresses
-// that have the high bit set.
-#define MAXVA (1L << (9 + 9 + 9 + 12 - 1))
+#endif // TOY_RISCV_KERNEL_KERNEL_RISCV_H
