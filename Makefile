@@ -3,12 +3,18 @@ U=user
 
 OBJS = \
   $K/entry.o \
-  $K/start.o \
-  $K/print.o \
-  $K/uart.o \
+  $K/kernel_vectors.o \
   $K/main.o \
   $K/mem_manage.o \
-  $K/test.o
+  $K/panic.o \
+  $K/print.o \
+  $K/process.o \
+  $K/start.o \
+  $K/switch.o \
+  $K/test.o \
+  $K/trampoline.o \
+  $K/trap.o \
+  $K/uart.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin

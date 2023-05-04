@@ -15,9 +15,7 @@ SECTIONS
         _trampoline = .;
         *(trampsec)
         . = ALIGN(0x1000);
-        /* FIXME: The following line is from xv6-riscv, but it will only assert false
-         * ASSERT(. - _trampoline == 0x1000, "error: trampoline larger than one page");
-         */
+        ASSERT(. - _trampoline == 0x1000, "error: trampoline larger than one page");
         PROVIDE(etext = .);
     }
 

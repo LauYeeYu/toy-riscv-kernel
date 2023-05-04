@@ -16,7 +16,7 @@ struct single_linked_list {
 };
 
 
-static inline struct single_linked_list *single_linked_list_create() {
+static inline struct single_linked_list *create_single_linked_list() {
     struct single_linked_list *list =
         (struct single_linked_list *)kmalloc(sizeof(struct single_linked_list));
     if (list == NULL) return NULL;
@@ -41,7 +41,17 @@ static inline void *head(struct single_linked_list *list) {
     return list->head;
 }
 
+static inline struct single_linked_list_node *
+head_node(struct single_linked_list *list) {
+    return list->head;
+}
+
 static inline void *tail(struct single_linked_list *list) {
+    return list->tail;
+}
+
+static inline struct single_linked_list_node *
+tail_node(struct single_linked_list *list) {
     return list->tail;
 }
 
@@ -59,7 +69,8 @@ static inline void pop_head(struct single_linked_list *list) {
     --(list->size);
 }
 
-static inline struct single_linked_list_node *make_node(void *data) {
+static inline struct single_linked_list_node *
+make_single_linked_list_node(void *data) {
     typedef struct single_linked_list_node node_t;
     node_t *node = (node_t *)kmalloc(sizeof(node_t));
     if (node == NULL) return NULL;
@@ -74,9 +85,8 @@ static inline struct single_linked_list_node *make_node(void *data) {
  * @param data
  * @return 0 if success, -1 if failed.
  */
-static inline int push_head(struct single_linked_list *list, void *data) {
-    struct single_linked_list_node *node = make_node(data);
-    if (node == NULL) return -1;
+static inline int push_head(struct single_linked_list *list,
+                            struct single_linked_list_node *node) {
     node->next = list->head;
     list->head = node;
     if (list->tail == NULL) list->tail = node;
@@ -90,9 +100,8 @@ static inline int push_head(struct single_linked_list *list, void *data) {
  * @param data
  * @return 0 if success, -1 if failed.
  */
-static inline int push_tail(struct single_linked_list *list, void *data) {
-    struct single_linked_list_node *node = make_node(data);
-    if (node == NULL) return -1;
+static inline int push_tail(struct single_linked_list *list,
+                            struct single_linked_list_node *node) {
     if (list->tail == NULL) {
         list->head = node;
         list->tail = node;
@@ -101,12 +110,12 @@ static inline int push_tail(struct single_linked_list *list, void *data) {
         list->tail = node;
     }
     ++(list->size);
+    node->next = NULL;
     return 0;
 }
 
 static inline int64 single_linked_list_size(struct single_linked_list *list) {
     return list->size;
 }
-
 
 #endif // TOY_RISCV_KERNEL_KERNEL_SINGLE_LINKED_LIST_H

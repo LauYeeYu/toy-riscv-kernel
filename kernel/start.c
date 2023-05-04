@@ -1,12 +1,17 @@
+#include "kernel_vectors.h"
+#include "memlayout.h"
 #include "print.h"
 #include "riscv.h"
 #include "types.h"
 #include "uart.h"
 
 pte_t kernel_pagetable[512] __attribute__((aligned(4096)));
+// a scratch area per CPU for machine-mode timer interrupts.
+uint64 timer_scratch[5];
 
 int main();
 void establish_page_table();
+void init_timer();
 
 // entry.S jumps here in machine mode.
 void start() {
@@ -46,6 +51,11 @@ void start() {
     print_string("Done.\n");
 
     write_mepc((uint64)main);
+
+    print_string("Setting timer... ");
+    init_timer();
+    print_string("Done.\n");
+
     // enter supervisor mode, and jump to main().
     asm volatile("mret");
 }
@@ -68,4 +78,31 @@ void establish_page_table() {
         pte |= 0b01111;
         kernel_pagetable[i] = pte;
     }
+}
+
+// arrange to receive timer interrupts. They will arrive in machine mode at
+// timer_vector in kernel_vectors.S, which turns them into software interrupts
+// in supervisor mode.
+void init_timer() {
+    // ask the CLINT for a timer interrupt.
+    int interval = 1000000; // cycles; about 1/10th second in qemu.
+    *(uint64*)CLINT_MTIMECMP(0) = *(uint64*)CLINT_MTIME + interval;
+
+    // prepare information in scratch[] for timervec.
+    // scratch[0..2] : space for timervec to save registers.
+    // scratch[3] : address of CLINT MTIMECMP register.
+    // scratch[4] : desired interval (in cycles) between timer interrupts.
+    uint64 *scratch = &timer_scratch[0];
+    scratch[3] = CLINT_MTIMECMP(0);
+    scratch[4] = interval;
+    write_mscratch((uint64)scratch);
+
+    // set the machine-mode trap handler.
+    write_mtvec((uint64)timer_vector);
+
+    // enable machine-mode interrupts.
+    write_mstatus(read_mstatus() | MSTATUS_MIE);
+
+    // enable machine-mode timer interrupts.
+    write_mie(read_mie() | MIE_MTIE);
 }
