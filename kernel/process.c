@@ -69,9 +69,9 @@ struct task_struct *new_task(
     if (map_result == -1) {
         deallocate(task->kernel_stack, 0);
         deallocate(user_stack, 0);
+        free_memory(task->pagetable, 0, task->memory_size);
         deallocate(task->pagetable, 0);
         kfree(task);
-        free_memory(task->pagetable, 0, task->memory_size - PGSIZE);
         return NULL;
     }
     task->state = RUNNABLE;
@@ -81,6 +81,13 @@ struct task_struct *new_task(
     task->context.ra = (uint64)user_trap_return;
     strcpy(task->name, name, min(31UL, strlen(name)));
     return task;
+}
+
+void free_user_memory(struct task_struct *task) {
+    deallocate(task->kernel_stack, 0);
+    deallocate(task->trap_frame, 0);
+    free_memory(task->pagetable, 0, task->memory_size);
+    deallocate(task->pagetable, 0);
 }
 
 /** Scheduler part */

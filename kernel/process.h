@@ -4,7 +4,7 @@
 #include "riscv.h"
 #include "types.h"
 
-enum process_state { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum process_state { SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Saved registers for kernel context switches.
 struct context {
@@ -107,6 +107,12 @@ struct task_struct *new_task(
     void *src_memory,
     size_t size
 );
+
+/**
+ * Free the memory of the user process. This function should be called when the
+ * process is terminated. Please note that the task_struct is not freed.
+ */
+void free_user_memory(struct task_struct *task);
 
 /**
  * Initialize the scheduler.
