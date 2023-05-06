@@ -2,10 +2,88 @@
 
 #include "defs.h"
 #include "mem_manage.h"
+#include "memlayout.h"
 #include "panic.h"
 #include "riscv.h"
+#include "riscv_defs.h"
 #include "single_linked_list.h"
 #include "switch.h"
+#include "trap.h"
+#include "virtual_memory.h"
+#include "utility.h"
+#include <stddef.h>
+
+extern char trampoline[]; // from kernel.ld
+
+pid_t next_pid = 1;
+
+struct task_struct *new_task(
+    const char *name,
+    struct task_struct *parent,
+    void *src_memory,
+    size_t size
+) {
+    int map_result = 0;
+    struct task_struct *task = kmalloc(sizeof(struct task_struct));
+    if (task == NULL) return NULL;
+    task->kernel_stack = allocate(0); // 4KiB stack is enough
+    task->pagetable = create_void_pagetable();
+    if (task->pagetable == NULL) {
+        kfree(task);
+        return NULL;
+    }
+    task->memory_size = init_virtual_memory_for_user(
+        task->pagetable,
+        src_memory,
+        size
+    );
+    if (task->memory_size == 0) {
+        deallocate(task->kernel_stack, 0);
+        deallocate(task->pagetable, 0);
+        kfree(task);
+        return NULL;
+    }
+    void *user_stack = allocate(0);
+    task->memory_size += PGSIZE;
+    task->trap_frame = allocate(0);
+    task->trap_frame->epc = 0;
+    task->trap_frame->sp = 0;
+    map_result |= map_page(
+        task->pagetable,
+        task->memory_size - PGSIZE,
+        (uint64)user_stack,
+        PTE_R | PTE_W | PTE_U
+    );
+    map_result |= map_page(
+        task->pagetable,
+        (uint64)task->trap_frame,
+        (uint64)TRAPFRAME,
+        PTE_R | PTE_W | PTE_U
+    );
+    map_result |= map_page(
+        task->pagetable,
+        (uint64)trampoline,
+        (uint64)TRAMPOLINE,
+        PTE_R | PTE_X | PTE_U
+    );
+    if (map_result == -1) {
+        deallocate(task->kernel_stack, 0);
+        deallocate(user_stack, 0);
+        deallocate(task->pagetable, 0);
+        kfree(task);
+        free_memory(task->pagetable, 0, task->memory_size - PGSIZE);
+        return NULL;
+    }
+    task->state = RUNNABLE;
+    task->pid = next_pid++;
+    task->parent = parent;
+    task->context.sp = (uint64)task->kernel_stack + PGSIZE;
+    task->context.ra = (uint64)user_trap_return;
+    strcpy(task->name, name, min(31UL, strlen(name)));
+    return task;
+}
+
+/** Scheduler part */
 
 struct task_struct *running_task = NULL;
 struct single_linked_list *runnable_tasks = NULL;
@@ -24,7 +102,7 @@ void scheduler() {
     for (;;) {
         interrupt_off();
         if (running_task != NULL) {
-            panic("scheduler: trying to run a task while another task is running\n");
+            panic("scheduler: trying to run a task while another task is running");
         }
         if (runnable_tasks->size > 0) {
             struct task_struct *task = head(runnable_tasks);

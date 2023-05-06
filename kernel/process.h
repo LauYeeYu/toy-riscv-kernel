@@ -1,6 +1,7 @@
 #ifndef TOY_RISCV_KERNEL_KERNEL_PROC_H
 #define TOY_RISCV_KERNEL_KERNEL_PROC_H
 
+#include "riscv.h"
 #include "types.h"
 
 enum process_state { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
@@ -83,14 +84,29 @@ struct task_struct {
     pid_t pid;                     // Process ID
     struct task_struct *parent;    // Parent process
     void *kernel_stack;            // Virtual address of kernel stack
-    uint64 sz;                     // Size of process memory (bytes)
-    pte_t *pagetable;              // User page table
+    uint64 memory_size;            // Size of process memory (bytes)
+    pagetable_t pagetable;         // User page table
     struct trap_frame *trap_frame; // data page for trampoline.S
     struct context context;        // swtch() here to run process
     char name[32];                 // Process name (debugging)
 };
 
 struct task_struct *current_task();
+
+/**
+ * Create the task_struct for a new user process.
+ * @param name the name of the process, only 31 characters are kept
+ * @param parent the parent process, NULL if it is the init
+ * @param src_memory the source address of the memory
+ * @param size the size of the memory
+ * @return the task_struct of the new process, NULL if failed
+ */
+struct task_struct *new_task(
+    const char *name,
+    struct task_struct *parent,
+    void *src_memory,
+    size_t size
+);
 
 /**
  * Initialize the scheduler.
