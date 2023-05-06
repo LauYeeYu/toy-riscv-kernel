@@ -75,8 +75,8 @@ void kernel_trap() {
             break;
     }
 
-    // the yield() may have caused some traps to occur,
-    // so restore trap registers for use by kernelvec.S's sepc instruction.
+    // the yield() may have caused some traps to occur, so restore
+    // trap registers for use by kernel_vector.S's sepc instruction.
     write_sepc(sepc);
     write_sstatus(sstatus);
 }
@@ -94,7 +94,7 @@ void user_trap_return() {
         ((uint64)user_vector - (uint64)trampoline);
     write_stvec(trampoline_user_vector);
 
-    // set up trapframe values that uservec will need when
+    // set up trapframe values that user_vector will need when
     // the process next traps into the kernel.
     task->trap_frame->kernel_satp = read_satp();
     task->trap_frame->kernel_sp = (uint64)task->kernel_stack + PGSIZE;
