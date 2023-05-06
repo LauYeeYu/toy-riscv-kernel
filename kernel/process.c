@@ -14,6 +14,7 @@
 #include <stddef.h>
 
 extern char trampoline[]; // from kernel.ld
+extern pagetable_t kernel_pagetable;
 
 pid_t next_pid = 1;
 
@@ -46,8 +47,9 @@ struct task_struct *new_task(
     void *user_stack = allocate(0);
     task->memory_size += PGSIZE;
     task->trap_frame = allocate(0);
+    task->trap_frame->kernel_satp = (uint64)kernel_pagetable;
     task->trap_frame->epc = 0;
-    task->trap_frame->sp = 0;
+    task->trap_frame->sp = task->memory_size;
     map_result |= map_page(
         task->pagetable,
         task->memory_size - PGSIZE,

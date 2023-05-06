@@ -5,7 +5,7 @@
 #include "types.h"
 #include "uart.h"
 
-pte_t kernel_pagetable[512] __attribute__((aligned(4096)));
+pte_t pagetable[512] __attribute__((aligned(4096)));
 // a scratch area per CPU for machine-mode timer interrupts.
 uint64 timer_scratch[5];
 
@@ -45,7 +45,7 @@ void start() {
 
     print_string("Enabling paging... ");
     // Set the page table.
-    write_satp(((uint64)kernel_pagetable >> 12) | SATP_SV39);
+    write_satp(((uint64)pagetable >> 12) | SATP_SV39);
     // Enable paging.
     write_sstatus((read_sstatus() | SSTATUS_SPP) & ~SSTATUS_SIE);
     print_string("Done.\n");
@@ -76,7 +76,7 @@ void establish_page_table() {
         pte |= (i << 28); // PPN[2]
         // a valid read-write-executable page
         pte |= 0b01111;
-        kernel_pagetable[i] = pte;
+        pagetable[i] = pte;
     }
 }
 

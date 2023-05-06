@@ -1,11 +1,18 @@
 #include "virtual_memory.h"
 
 #include "mem_manage.h"
+#include "memlayout.h"
 #include "panic.h"
 #include "riscv_defs.h"
-#include "types.h"
 #include "riscv.h"
+#include "types.h"
 #include "utility.h"
+
+extern char etext[];  // kernel.ld sets this to end of kernel code.
+extern char trampoline[]; // trampoline.S
+
+// A finer page table for kernel, initialized in make_kernel_pagetable
+pagetable_t kernel_pagetable = NULL;
 
 pte_t *pagetable_entry(pagetable_t pagetable, uint64 va, int alloc) {
     if (va >= MAXVA) panic("pagetable_entry: va >= MAXVA");
@@ -30,6 +37,57 @@ uint64 physical_address(pagetable_t pagetable, uint64 va) {
     pte_t *pte = pagetable_entry(pagetable, va, 0);
     if (pte == NULL || (*pte & PTE_V) == 0) return NULL;
     return PTE2PA(*pte) + PGOFFSET(va);
+}
+
+void kernel_map_pages(pagetable_t pagetable,
+                      uint64 va,
+                      uint64 pa,
+                      uint64 size,
+                      uint64 permission) {
+    va = PGROUNDDOWN(va);
+    pa = PGROUNDDOWN(pa);
+    for (uint64 i = 0; i < size; i += PGSIZE) {
+        int result = map_page(pagetable, va + i, pa + i, permission);
+        if (result == -1) panic("kernel_map_pages: map_page failed");
+    }
+}
+
+void make_kernel_pagetable() {
+    kernel_pagetable = allocate(0); // Get a page for the root level
+    if (kernel_pagetable == NULL) {
+        panic("make_kernel_pagetable: page table allocate failed");
+    }
+    memset(kernel_pagetable, 0, PGSIZE); // Need to set all entries as invalid
+
+    // Map components of kernel
+    uint64 rw = PTE_R | PTE_W;
+    uint64 rx = PTE_R | PTE_X;
+    // UART
+    kernel_map_pages(kernel_pagetable, UART0, UART0, PGSIZE, rw);
+    // virtio mmio disk interface
+    kernel_map_pages(kernel_pagetable, VIRTIO0, VIRTIO0, PGSIZE, rw);
+    // PLIC
+    kernel_map_pages(kernel_pagetable, PLIC, PLIC, 0x400000, rw);
+    // map kernel text executable and read-only.
+    kernel_map_pages(kernel_pagetable, KERNBASE, KERNBASE, (uint64)etext - KERNBASE, rx);
+    // map kernel data and the physical RAM we'll make use of.
+    kernel_map_pages(kernel_pagetable, (uint64)etext, (uint64)etext, PHYSTOP - (uint64)etext, rw);
+    // map the trampoline for trap entry/exit to the highest virtual
+    // address in the kernel.
+    kernel_map_pages(kernel_pagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, rx);
+}
+
+void init_kernel_pagetable() {
+    // make the kernel pagetable
+    make_kernel_pagetable();
+
+    // wait for any previous writes to the page table memory to finish.
+    sfence_vma();
+
+    write_satp(MAKE_SATP(kernel_pagetable));
+
+    // flush stale entries from the TLB.
+    sfence_vma();
 }
 
 pagetable_t create_void_pagetable() {
@@ -84,9 +142,9 @@ void free_memory(pagetable_t pagetable, uint64 start, size_t size) {
 }
 
 int map_page(pagetable_t pagetable,
-              uint64 va,
-              uint64 pa,
-              uint64 permission) {
+             uint64 va,
+             uint64 pa,
+             uint64 permission) {
     va = PGROUNDDOWN(va);
     pa = PGROUNDDOWN(pa);
     pte_t *pte = pagetable_entry(pagetable, va, 1);

@@ -32,6 +32,11 @@ pte_t *pagetable_entry(pagetable_t pagetable, uint64 va, int alloc);
 uint64 physical_address(pagetable_t pagetable, uint64 va);
 
 /**
+ * Change the pagetable to be a finer one in terms of its permission control.
+ */
+void init_kernel_pagetable();
+
+/**
  * Create a void page table. If there is no memory, a NULL pointer is returned.
  */
 pagetable_t create_void_pagetable();
