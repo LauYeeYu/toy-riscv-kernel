@@ -38,7 +38,7 @@ static inline void single_linked_list_destroy(struct single_linked_list *list) {
 }
 
 static inline void *head(struct single_linked_list *list) {
-    return list->head;
+    return list->head->data;
 }
 
 static inline struct single_linked_list_node *
@@ -47,7 +47,7 @@ head_node(struct single_linked_list *list) {
 }
 
 static inline void *tail(struct single_linked_list *list) {
-    return list->tail;
+    return list->tail->data;
 }
 
 static inline struct single_linked_list_node *
