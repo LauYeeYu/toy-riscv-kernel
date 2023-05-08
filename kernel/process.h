@@ -126,4 +126,8 @@ void scheduler();
 /* Try to switch to other user process. */
 void yield();
 
+#ifdef TOY_RISCV_KERNEL_TEST_SCHEDULER
+void test_scheduler();
+#endif // TOY_RISCV_KERNEL_TEST_SCHEDULER
+
 #endif //TOY_RISCV_KERNEL_KERNEL_PROC_H

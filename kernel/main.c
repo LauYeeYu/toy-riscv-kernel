@@ -1,5 +1,6 @@
 #include "mem_manage.h"
 #include "print.h"
+#include "process.h"
 #include "riscv.h"
 #include "test.h"
 #include "types.h"
@@ -14,6 +15,7 @@ int main() {
     print_string("Changing page table... ");
     init_kernel_pagetable();
     print_string("Done.\n");
+    init_scheduler();
     test();
     return 0;
 }

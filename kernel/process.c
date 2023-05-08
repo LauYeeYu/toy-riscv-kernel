@@ -105,7 +105,9 @@ struct task_struct *current_task() {
 
 void init_scheduler() {
     runnable_tasks = create_single_linked_list();
+#ifndef TOY_RISCV_KERNEL_TEST_SCHEDULER
     //TODO: add /init here
+#endif // NOT TOY_RISCV_KERNEL_TEST_SCHEDULER
 }
 
 void scheduler() {
@@ -138,3 +140,30 @@ void yield() {
     running_task->state = RUNNING;
     switch_context(old_context, &(running_task->context));
 }
+
+#ifdef TOY_RISCV_KERNEL_TEST_SCHEDULER
+uint32 program1[] = {
+    0x10000537, // lui a0,0x10000
+    0x0310059b, // addiw a1,zero,0x31
+    0x00b50023, // sb a1,0(a0)
+    0xbfd5 // j 0
+};
+
+uint32 program2[] = {
+    0x10000537, // lui a0,0x10000
+    0x0320059b, // addiw a1,zero,0x32
+    0x00b50023, // sb a1,0(a0)
+    0xbfd5 // j 0
+};
+
+void test_scheduler() {
+    struct task_struct *task1 = new_task("task1", NULL, program1, sizeof(program1));
+    struct task_struct *task2 = new_task("task2", NULL, program2, sizeof(program2));
+    map_page(task1->pagetable, UART0, UART0, PTE_R | PTE_W | PTE_X | PTE_U);
+    map_page(task2->pagetable, UART0, UART0, PTE_R | PTE_W | PTE_X | PTE_U);
+    push_tail(runnable_tasks, make_single_linked_list_node(task1));
+    push_tail(runnable_tasks, make_single_linked_list_node(task2));
+    scheduler();
+}
+
+#endif // TOY_RISCV_KERNEL_TEST_SCHEDULER
