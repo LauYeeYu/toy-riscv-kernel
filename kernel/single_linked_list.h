@@ -56,7 +56,7 @@ tail_node(struct single_linked_list *list) {
 }
 
 static inline void pop_head(struct single_linked_list *list) {
-    if (list->head) return;
+    if (list->head == NULL) return;
     if (list->head == list->tail) {
         kfree(list->head);
         list->head = NULL;
