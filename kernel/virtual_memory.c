@@ -130,7 +130,7 @@ size_t init_virtual_memory_for_user(pagetable_t pagetable,
             return 0;
         }
     }
-    return (size_t)pages * PGSIZE;
+    return PGSIZE << power;
 }
 
 void free_memory(pagetable_t pagetable, uint64 start, size_t size) {
