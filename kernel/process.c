@@ -126,13 +126,15 @@ void scheduler() {
 }
 
 void yield() {
+    struct context *old_context = &now_context;
     if (running_task != NULL) {
         running_task->state = RUNNABLE;
         push_tail(runnable_tasks, make_single_linked_list_node(running_task));
+        old_context = &(running_task->context);
     }
 
     running_task = head(runnable_tasks);
     pop_head(runnable_tasks);
     running_task->state = RUNNING;
-    switch_context(&(running_task->context), &now_context);
+    switch_context(old_context, &(running_task->context));
 }
