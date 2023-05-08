@@ -9,18 +9,25 @@
 #include "types.h"
 
 
-enum cause { UNKNOWN, TIMER };
+enum cause { UNKNOWN, SYSCALL, TIMER };
 
 enum cause supervisor_trap_cause() {
     uint64 scause = read_scause();
 
-    if (scause == 0x8000000000000001L) {
-        // acknowledge the software interrupt by clearing
-        // the SSIP bit in sip.
-        write_sip(read_sip() & ~2);
-        return TIMER;
-    } else {
-        return UNKNOWN;
+    switch (scause) {
+        case 0x8000000000000001L: { // Supervisor software interrupt
+            // ACTUALLY caused by TIMER interrupt
+            // acknowledge the software interrupt by clearing
+            // the SSIP bit in sip.
+            write_sip(read_sip() & ~2);
+            return TIMER;
+        }
+        case 8: { // Environment call from U-mode (ACTUALLY syscall)
+            return SYSCALL;
+        }
+        default: {
+            return UNKNOWN;
+        }
     }
 }
 
