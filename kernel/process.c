@@ -4,6 +4,7 @@
 #include "mem_manage.h"
 #include "memlayout.h"
 #include "panic.h"
+#include "print.h"
 #include "riscv.h"
 #include "riscv_defs.h"
 #include "single_linked_list.h"
@@ -11,7 +12,6 @@
 #include "trap.h"
 #include "virtual_memory.h"
 #include "utility.h"
-#include <stddef.h>
 
 extern char trampoline[]; // from kernel.ld
 extern pagetable_t kernel_pagetable;
@@ -30,6 +30,7 @@ struct task_struct *new_task(
     task->kernel_stack = allocate(0); // 4KiB stack is enough
     task->pagetable = create_void_pagetable();
     if (task->pagetable == NULL) {
+        deallocate(task->kernel_stack, 0);
         kfree(task);
         return NULL;
     }
@@ -58,17 +59,17 @@ struct task_struct *new_task(
     );
     map_result |= map_page(
         task->pagetable,
-        (uint64)task->trap_frame,
         (uint64)TRAPFRAME,
-        PTE_R | PTE_W | PTE_U
+        (uint64)task->trap_frame,
+        PTE_R | PTE_W
     );
     map_result |= map_page(
         task->pagetable,
-        (uint64)trampoline,
         (uint64)TRAMPOLINE,
-        PTE_R | PTE_X | PTE_U
+        (uint64)trampoline,
+        PTE_R | PTE_X
     );
-    if (map_result == -1) {
+    if (map_result != 0) {
         deallocate(task->kernel_stack, 0);
         deallocate(user_stack, 0);
         free_memory(task->pagetable, 0, task->memory_size);
