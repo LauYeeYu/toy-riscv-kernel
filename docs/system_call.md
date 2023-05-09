@@ -1,0 +1,132 @@
+# System Call
+
+Sytem calls (or syscalls) provides a method for user processes to ask for
+services from the kernel.
+
+The kernel provides a set of syscalls for user processes (listed in the
+[types section](#types)). These syscalls are already wrapped in the
+user library, so that user processes can call them easily without caring
+about the convention.
+
+## Types
+
+|   Name   | ID |             Description             |
+|:--------:|:--:| ----------------------------------- |
+|   fork   |  1 | Create a new process                |
+|   exec   |  2 | Execute a program                   |
+|   exit   |  3 | Exit current process                |
+|   wait   |  4 | Wait for any one of child processes |
+| wait_pid |  5 | Wait for a certain process          |
+|   kill   |  6 | Kill a process                      |
+| put_char |  7 | Put a character to screen           |
+| get_char |  8 | Get a character from keyboard       |
+
+## Convention
+
+The input arguments are limited to 7 registers, i.e., `a0` to `a6`. `a7` is
+reserved for the syscall id. The return value is stored in `a0`.
+
+## Details
+
+- [fork](#fork)
+- [exec](#exec)
+- [exit](#exit)
+- [wait](#wait)
+- [wait_pid](#wait_pid)
+- [kill](#kill)
+- [put_char](#put_char)
+- [get_char](#get_char)
+
+### fork
+
+```c
+pid_t fork();
+```
+
+Create a new process. The new process will be a copy of the current process,
+except that the new process has a new process id, and the return value is
+different in the two processes.
+
+If the fork call is successful, the return value is 0 in the new process,
+and the process id of the new process in the current process. If not, it
+will return -1.
+
+### exec
+
+```c
+int exec(const char *name, char *const argv[]);
+```
+
+Execute a program. The program is specified by `name` and `argv`. The
+program will be loaded into the current process, and the current process
+will be replaced by the new program.
+
+If the exec call is successful, it will not return. If not, it will return
+-1.
+
+### exit
+
+```c
+void exit(int status);
+```
+
+Exit current process. The exit status is specified by `status`.
+
+### wait
+
+```c
+pid_t wait(int *status);
+```
+Suspend execution of the calling thread until one of its children terminates.
+The exit status of the exited child process will be stored in `status` if
+`status` is not NULL. If you don't care about the exit status, you can pass
+NULL to `status`.
+
+This function will return the process id of the exited child process, or
+-1 if there are no child of this program.
+
+### wait_pid
+
+```c
+pid_t wait_pid(pid_t pid, int *status);
+```
+
+Suspend execution of the calling
+thread until a child specified by *pid* argument has changed state. (See the
+table below for the meaning of *pid* argument.) The exit status of the exited
+child process will be stored in `status` if `status` is not NULL. If you
+don't care about the exit status, you can pass NULL to `status`.
+
+This function will return the process id of the exited child process, or
+-1 if there are no child of this program.
+
+| value |                         meaning                         |
+|:-----:| ------------------------------------------------------- |
+|   -1  | any child process                                       |
+|  > 0  | the child whose process ID is equal to the value of pid |
+
+### kill
+
+```c
+int kill(pid_t pid);
+```
+
+Kill a process. The process is specified by `pid`. The `pid` must be positive
+and cannot be 1 (The init cannot be killed).
+
+### put_char
+
+```c
+void put_char(int char);
+```
+
+Put a character on the terminal.
+
+### get_char
+
+```c
+char get_char();
+```
+
+Get a character from the terminal.
+

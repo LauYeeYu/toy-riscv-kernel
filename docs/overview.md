@@ -25,3 +25,5 @@ The kernel uses buddy system to manage memory.
 ## Process Management
 
 See [process.md](process.md).
+
+For system calls, see [system_call.md](system_call.md).
