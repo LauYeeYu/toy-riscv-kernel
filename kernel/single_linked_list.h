@@ -118,4 +118,13 @@ static inline int64 single_linked_list_size(struct single_linked_list *list) {
     return list->size;
 }
 
+static inline void for_each_node(struct single_linked_list *list,
+                                 void (*func)(void *)) {
+    struct single_linked_list_node *node = list->head;
+    while (node != NULL) {
+        func(node->data);
+        node = node->next;
+    }
+}
+
 #endif // TOY_RISCV_KERNEL_KERNEL_SINGLE_LINKED_LIST_H
