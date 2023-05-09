@@ -61,6 +61,13 @@ uint64 init_virtual_memory_for_user(pagetable_t pagetable,
 void free_memory(pagetable_t pagetable, uint64 start, size_t size);
 
 /**
+ * Free the page table. Please note that is function will not free the pages
+ * since freeing some static pages (like trampoline) is problematic.
+ * @param pagetable the page table
+ */
+void free_pagetable(pagetable_t pagetable);
+
+/**
  * Map the page on va to pa in page table.
  * @param pagetable the page table
  * @param va the virtual address

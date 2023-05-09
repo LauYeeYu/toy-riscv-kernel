@@ -141,6 +141,22 @@ void free_memory(pagetable_t pagetable, uint64 start, size_t size) {
     }
 }
 
+void free_pagetable_internal(pagetable_t pagetable, int level) {
+    if (level > 0) {
+        for (uint64 i = 0; i < 512; i++) {
+            pte_t *pte = &pagetable[i];
+            if ((*pte & PTE_V) && level > 1) {
+                free_pagetable_internal((pagetable_t)PTE2PA(*pte), level - 1);
+            }
+        }
+    }
+    deallocate(pagetable, 0);
+}
+
+void free_pagetable(pagetable_t pagetable) {
+    free_pagetable_internal(pagetable, 2);
+}
+
 int map_page(pagetable_t pagetable,
              uint64 va,
              uint64 pa,
