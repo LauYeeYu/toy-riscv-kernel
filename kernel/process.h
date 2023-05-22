@@ -88,6 +88,7 @@ struct task_struct {
     pagetable_t pagetable;         // User page table
     struct trap_frame *trap_frame; // data page for trampoline.S
     struct context context;        // swtch() here to run process
+    int exit_status;               // Process exit status
     char name[32];                 // Process name (debugging)
 };
 
@@ -125,6 +126,11 @@ void scheduler();
 
 /* Try to switch to other user process. */
 void yield();
+
+/**
+ * Handle all system calls.
+ */
+void syscall();
 
 #ifdef TOY_RISCV_KERNEL_TEST_SCHEDULER
 void test_scheduler();

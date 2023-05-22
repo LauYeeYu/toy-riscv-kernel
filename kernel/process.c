@@ -9,7 +9,9 @@
 #include "riscv_defs.h"
 #include "single_linked_list.h"
 #include "switch.h"
+#include "syscall.h"
 #include "trap.h"
+#include "uart.h"
 #include "virtual_memory.h"
 #include "utility.h"
 
@@ -90,13 +92,15 @@ void free_user_memory(struct task_struct *task) {
     deallocate(task->kernel_stack, 0);
     deallocate(task->trap_frame, 0);
     free_memory(task->pagetable, 0, task->memory_size);
-    deallocate(task->pagetable, 0);
+    free_pagetable(task->pagetable);
 }
 
 /** Scheduler part */
 
 struct task_struct *running_task = NULL;
+struct task_struct *init = NULL;
 struct single_linked_list *runnable_tasks = NULL;
+struct single_linked_list *all_tasks = NULL;
 struct context now_context;
 
 struct task_struct *current_task() {
@@ -105,6 +109,7 @@ struct task_struct *current_task() {
 
 void init_scheduler() {
     runnable_tasks = create_single_linked_list();
+    all_tasks = create_single_linked_list();
 #ifndef TOY_RISCV_KERNEL_TEST_SCHEDULER
     //TODO: add /init here
 #endif // NOT TOY_RISCV_KERNEL_TEST_SCHEDULER
@@ -162,8 +167,124 @@ void test_scheduler() {
     map_page(task1->pagetable, UART0, UART0, PTE_R | PTE_W | PTE_X | PTE_U);
     map_page(task2->pagetable, UART0, UART0, PTE_R | PTE_W | PTE_X | PTE_U);
     push_tail(runnable_tasks, make_single_linked_list_node(task1));
+    push_tail(all_tasks, make_single_linked_list_node(task1));
     push_tail(runnable_tasks, make_single_linked_list_node(task2));
+    push_tail(all_tasks, make_single_linked_list_node(task2));
     scheduler();
 }
-
 #endif // TOY_RISCV_KERNEL_TEST_SCHEDULER
+
+void reparent(void *data) {
+    struct task_struct *task = (struct task_struct *)data;
+    if (task->parent != NULL && task->parent->state == ZOMBIE) {
+        task->parent = init;
+    }
+}
+
+uint64 fork_process(struct task_struct *task) {
+    // TODO
+    return NULL;
+}
+
+void exit_process(struct task_struct *task, int status) {
+    if (task == NULL) {
+        panic("exit_process: the process is NULL");
+    }
+    free_user_memory(running_task);
+    running_task->state = ZOMBIE;
+    running_task->exit_status = status;
+    running_task = NULL;
+    for_each_node(all_tasks, reparent);
+    yield();
+}
+
+uint64 exec_process(struct task_struct *task, const char *name,
+                  char *const argv[]) {
+    // TODO
+    return NULL;
+}
+
+/** Syscall part */
+
+uint64 sys_fork();
+uint64 sys_exec();
+uint64 sys_exit();
+uint64 sys_wait();
+uint64 sys_wait_pid();
+uint64 sys_kill();
+uint64 sys_put_char();
+uint64 sys_get_char();
+
+#define SYSCALL_FORK     1
+#define SYSCALL_EXEC     2
+#define SYSCALL_EXIT     3
+#define SYSCALL_WAIT     4
+#define SYSCALL_WAIT_PID 5
+#define SYSCALL_KILL     6
+#define SYSCALL_PUT_CHAR 7
+#define SYSCALL_GET_CHAR 8
+
+static uint64 (*syscalls[])() = {
+    [SYSCALL_FORK]     = sys_fork,
+    [SYSCALL_EXEC]     = sys_exec,
+    [SYSCALL_EXIT]     = sys_exit,
+    [SYSCALL_WAIT]     = sys_wait,
+    [SYSCALL_WAIT_PID] = sys_wait_pid,
+    [SYSCALL_KILL]     = sys_kill,
+    [SYSCALL_PUT_CHAR] = sys_put_char,
+    [SYSCALL_GET_CHAR] = sys_get_char
+};
+
+void syscall() {
+    int id = running_task->trap_frame->a7;
+    if (id > 0 && id < sizeof(syscalls) / sizeof(syscalls[0])) {
+        running_task->trap_frame->a0 = syscalls[id]();
+    } else {
+        print_string("syscall: unknown syscall id: ");
+        print_int(id, 10);
+        print_string(".\n");
+        running_task->trap_frame->a0 = -1;
+    }
+}
+
+uint64 sys_fork() {
+    return fork_process(current_task());
+}
+
+uint64 sys_exec() {
+    // TODO
+    return NULL;
+}
+
+uint64 sys_exit() {
+    exit_process(current_task(), running_task->trap_frame->a0);
+    return 0;
+}
+
+uint64 sys_wait() {
+    // TODO
+    return NULL;
+}
+
+uint64 sys_wait_pid() {
+    // TODO
+    return NULL;
+}
+
+uint64 sys_kill() {
+    // TODO
+    return NULL;
+}
+
+uint64 sys_put_char() {
+    char c = (char)running_task->trap_frame->a0;
+    print_char(c);
+    return 0;
+}
+
+uint64 sys_get_char() {
+    int c;
+    while ((c = uart_getc()) == -1 && runnable_tasks->size > 0) yield();
+    while ((c = uart_getc()) == -1) asm volatile("wfi");
+    return c;
+}

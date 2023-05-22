@@ -54,6 +54,9 @@ void user_trap() {
             yield();
             break;
         }
+        case SYSCALL: {
+            break;
+        }
         default:
             break;
     }
