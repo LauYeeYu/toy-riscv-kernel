@@ -10,16 +10,16 @@ about the convention.
 
 ## Types
 
-|   Name   | ID |             Description             |
-|:--------:|:--:| ----------------------------------- |
-|   fork   |  1 | Create a new process                |
-|   exec   |  2 | Execute a program                   |
-|   exit   |  3 | Exit current process                |
-|   wait   |  4 | Wait for any one of child processes |
-| wait_pid |  5 | Wait for a certain process          |
-|   kill   |  6 | Kill a process                      |
-| put_char |  7 | Put a character to screen           |
-| get_char |  8 | Get a character from keyboard       |
+|    Name     | ID |             Description             |
+|:-----------:|:--:| ----------------------------------- |
+|    fork     |  1 | Create a new process                |
+|    exec     |  2 | Execute a program                   |
+|    exit     |  3 | Exit current process                |
+|    wait     |  4 | Wait for any one of child processes |
+|  wait_pid   |  5 | Wait for a certain process          |
+| send_signal |  6 | Kill a process                      |
+|  put_char   |  7 | Put a character to screen           |
+|  get_char   |  8 | Get a character from keyboard       |
 
 ## Convention
 
@@ -33,7 +33,7 @@ reserved for the syscall id. The return value is stored in `a0`.
 - [exit](#exit)
 - [wait](#wait)
 - [wait_pid](#wait_pid)
-- [kill](#kill)
+- [send_signal](#send_signal)
 - [put_char](#put_char)
 - [get_char](#get_char)
 
@@ -105,14 +105,14 @@ This function will return the process id of the exited child process, or
 |   -1  | any child process                                       |
 |  > 0  | the child whose process ID is equal to the value of pid |
 
-### kill
+### send_signal
 
 ```c
-int kill(pid_t pid);
+int send_signal(pid_t pid, int sig);
 ```
 
-Kill a process. The process is specified by `pid`. The `pid` must be positive
-and cannot be 1 (The init cannot be killed).
+Send a signal to a process. The process is specified by `pid`. The `pid`
+must be positive and cannot be 1. The signal is specified by `sig`.
 
 ### put_char
 
