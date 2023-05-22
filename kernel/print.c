@@ -6,6 +6,12 @@
 // lock to avoid interleaving concurrent printf's.
 static spinlock lock;
 
+void print_char(char c) {
+    acquire(&lock);
+    uart_putc_sync(c);
+    release(&lock);
+}
+
 void print_string(const char *str) {
     acquire(&lock);
     while (*str != '\0') {
