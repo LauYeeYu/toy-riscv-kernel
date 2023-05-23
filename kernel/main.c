@@ -1,4 +1,5 @@
 #include "mem_manage.h"
+#include "plic.h"
 #include "print.h"
 #include "process.h"
 #include "riscv.h"
@@ -15,6 +16,8 @@ int main() {
     print_string("Changing page table... ");
     init_kernel_pagetable();
     print_string("Done.\n");
+    plicinit();      // set up interrupt controller
+    plicinithart();  // ask PLIC for device interrupts
     init_scheduler();
     test();
     return 0;

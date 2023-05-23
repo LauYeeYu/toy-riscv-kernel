@@ -4,6 +4,10 @@
 #include "riscv.h"
 #include "types.h"
 
+// the current process. Since the kernel now only supports single CPU, it will
+// always be the current process.
+static inline int cpuid() { return 0; }
+
 enum process_state { SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Saved registers for kernel context switches.

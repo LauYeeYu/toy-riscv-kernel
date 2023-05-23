@@ -3,16 +3,42 @@
 #include "kernel_vectors.h"
 #include "memlayout.h"
 #include "panic.h"
+#include "plic.h"
+#include "print.h"
 #include "process.h"
 #include "riscv.h"
 #include "trampoline.h"
 #include "types.h"
+#include "uart.h"
 
 
-enum cause { UNKNOWN, SYSCALL, TIMER };
+enum cause { UNKNOWN, SYSCALL, TIMER, UART, VIRTIO };
 
 enum cause supervisor_trap_cause() {
     uint64 scause = read_scause();
+
+    if ((scause & 0x8000000000000000L) && (scause & 0xff) == 9) {
+        // this is a supervisor external interrupt, via PLIC.
+
+        // irq indicates which device interrupted.
+        int irq = plic_claim();
+
+        if (irq == UART0_IRQ) {
+            uart_intr();
+            plic_complete(irq);
+            return UART;
+        } else if (irq == VIRTIO0_IRQ) {
+            // virtio_disk_intr();
+            plic_complete(irq);
+            return VIRTIO;
+        } else if (irq) {
+            print_string("unexpected interrupt irq=");
+            print_int(irq, 10);
+            print_string("\n");
+            plic_complete(irq);
+            return UNKNOWN;
+        }
+    }
 
     switch (scause) {
         case 0x8000000000000001L: { // Supervisor software interrupt
@@ -55,6 +81,7 @@ void user_trap() {
             break;
         }
         case SYSCALL: {
+            syscall();
             break;
         }
         default:

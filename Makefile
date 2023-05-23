@@ -7,6 +7,7 @@ OBJS = \
   $K/main.o \
   $K/mem_manage.o \
   $K/panic.o \
+  $K/plic.o \
   $K/print.o \
   $K/process.o \
   $K/start.o \
