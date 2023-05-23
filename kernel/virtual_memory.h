@@ -53,6 +53,17 @@ uint64 init_virtual_memory_for_user(pagetable_t pagetable,
                                     size_t size);
 
 /**
+ * Initialize the page table for user processes.
+ * @param pagetable the page table
+ * @param data the process data
+ * @param size the size of the data
+ * @return 0 if succeed, -1 if fails
+ */
+size_t init_pagetable_for_user(pagetable_t pagetable,
+                               void *data,
+                               size_t size);
+
+/**
  * Free the memory from [start, start + size).
  * @param pagetable the page table
  * @param start the start address

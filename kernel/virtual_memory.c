@@ -133,6 +133,31 @@ size_t init_virtual_memory_for_user(pagetable_t pagetable,
     return PGSIZE << power;
 }
 
+size_t init_pagetable_for_user(pagetable_t pagetable,
+                               void *data,
+                               size_t size) {
+    if ((uint64)data & (PGSIZE - 1) || size & (PGSIZE - 1)) {
+        panic("init_pagetable_for_user: data not aligned");
+    }
+
+    // map the pages to the pagetable
+    for (uint64 i = 0; i < size; i += PGSIZE) {
+        int result = map_page(
+            pagetable,
+            i,
+            (uint64)data + i,
+            PTE_R | PTE_W | PTE_X | PTE_U
+        );
+        if (result == -1) {
+            for (uint64 j = 0; j < i; j += 4096) {
+                unmap_page(pagetable, j);
+            }
+            return -1;
+        }
+    }
+    return 0;
+}
+
 void free_memory(pagetable_t pagetable, uint64 start, size_t size) {
     start = PGROUNDDOWN(start);
     for (uint64 i = 0; i < size; i += PGSIZE) {
