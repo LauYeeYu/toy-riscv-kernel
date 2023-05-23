@@ -97,14 +97,15 @@ void free_user_memory(struct task_struct *task) {
 
 /** Scheduler part */
 
-struct task_struct *running_task = NULL;
+struct single_linked_list_node *running_task = NULL;
 struct task_struct *init = NULL;
 struct single_linked_list *runnable_tasks = NULL;
 struct single_linked_list *all_tasks = NULL;
 struct context now_context;
 
 struct task_struct *current_task() {
-    return running_task;
+    if (runnable_tasks == NULL) return NULL;
+    return (struct task_struct *)(running_task->data);
 }
 
 void init_scheduler() {
@@ -122,10 +123,11 @@ void scheduler() {
             panic("scheduler: trying to run a task while another task is running");
         }
         if (runnable_tasks->size > 0) {
-            struct task_struct *task = head(runnable_tasks);
-            running_task = task;
+            struct single_linked_list_node *task_node = head_node(runnable_tasks);
+            running_task = task_node;
+            struct task_struct *task = task_node->data;
             pop_head(runnable_tasks);
-            switch_context(&now_context, &(running_task->context));
+            switch_context(&now_context, &(task->context));
         }
         interrupt_on();
     }
@@ -133,17 +135,21 @@ void scheduler() {
 }
 
 void yield() {
+    interrupt_off();
     struct context *old_context = &now_context;
-    if (running_task != NULL) {
-        running_task->state = RUNNABLE;
-        push_tail(runnable_tasks, make_single_linked_list_node(running_task));
-        old_context = &(running_task->context);
+    struct task_struct *task = current_task();
+    if (task != NULL) {
+        task->state = RUNNABLE;
+        push_tail(runnable_tasks, running_task);
+        old_context = &(task->context);
     }
 
-    running_task = head(runnable_tasks);
+    running_task = head_node(runnable_tasks);
+    struct task_struct *new_task = current_task();
     pop_head(runnable_tasks);
-    running_task->state = RUNNING;
-    switch_context(old_context, &(running_task->context));
+    new_task->state = RUNNING;
+    interrupt_on();
+    switch_context(old_context, &(new_task->context));
 }
 
 #ifdef TOY_RISCV_KERNEL_TEST_SCHEDULER
@@ -190,10 +196,10 @@ void exit_process(struct task_struct *task, int status) {
     if (task == NULL) {
         panic("exit_process: the process is NULL");
     }
-    free_user_memory(running_task);
-    running_task->state = ZOMBIE;
-    running_task->exit_status = status;
-    running_task = NULL;
+    free_user_memory(task);
+    task->state = ZOMBIE;
+    task->exit_status = status;
+    task = NULL;
     for_each_node(all_tasks, reparent);
     yield();
 }
@@ -206,14 +212,14 @@ uint64 exec_process(struct task_struct *task, const char *name,
 
 /** Syscall part */
 
-uint64 sys_fork();
-uint64 sys_exec();
-uint64 sys_exit();
-uint64 sys_wait();
-uint64 sys_wait_pid();
-uint64 sys_kill();
-uint64 sys_put_char();
-uint64 sys_get_char();
+uint64 sys_fork(struct task_struct * task);
+uint64 sys_exec(struct task_struct * task);
+uint64 sys_exit(struct task_struct * task);
+uint64 sys_wait(struct task_struct * task);
+uint64 sys_wait_pid(struct task_struct * task);
+uint64 sys_kill(struct task_struct * task);
+uint64 sys_put_char(struct task_struct * task);
+uint64 sys_get_char(struct task_struct * task);
 
 #define SYSCALL_FORK     1
 #define SYSCALL_EXEC     2
@@ -224,7 +230,7 @@ uint64 sys_get_char();
 #define SYSCALL_PUT_CHAR 7
 #define SYSCALL_GET_CHAR 8
 
-static uint64 (*syscalls[])() = {
+static uint64 (*syscalls[])(struct task_struct *) = {
     [SYSCALL_FORK]     = sys_fork,
     [SYSCALL_EXEC]     = sys_exec,
     [SYSCALL_EXIT]     = sys_exit,
@@ -236,53 +242,55 @@ static uint64 (*syscalls[])() = {
 };
 
 void syscall() {
-    int id = running_task->trap_frame->a7;
+    struct task_struct *current = current_task();
+    if (current == NULL) panic("syscall: no task running!");
+    int id = current->trap_frame->a7;
     if (id > 0 && id < sizeof(syscalls) / sizeof(syscalls[0])) {
-        running_task->trap_frame->a0 = syscalls[id]();
+        current->trap_frame->a0 = syscalls[id](current);
     } else {
         print_string("syscall: unknown syscall id: ");
         print_int(id, 10);
         print_string(".\n");
-        running_task->trap_frame->a0 = -1;
+        current->trap_frame->a0 = -1;
     }
 }
 
-uint64 sys_fork() {
-    return fork_process(current_task());
+uint64 sys_fork(struct task_struct *task) {
+    return fork_process(task);
 }
 
-uint64 sys_exec() {
+uint64 sys_exec(struct task_struct * task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_exit() {
-    exit_process(current_task(), running_task->trap_frame->a0);
+uint64 sys_exit(struct task_struct * task) {
+    exit_process(task, task->trap_frame->a0);
     return 0;
 }
 
-uint64 sys_wait() {
+uint64 sys_wait(struct task_struct * task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_wait_pid() {
+uint64 sys_wait_pid(struct task_struct * task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_kill() {
+uint64 sys_kill(struct task_struct * task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_put_char() {
-    char c = (char)running_task->trap_frame->a0;
+uint64 sys_put_char(struct task_struct * task) {
+    char c = (char)task->trap_frame->a0;
     print_char(c);
     return 0;
 }
 
-uint64 sys_get_char() {
+uint64 sys_get_char(struct task_struct * task) {
     int c;
     while ((c = uart_getc()) == -1 && runnable_tasks->size > 0) yield();
     while ((c = uart_getc()) == -1) asm volatile("wfi");
