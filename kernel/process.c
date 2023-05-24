@@ -268,28 +268,28 @@ uint64 sys_exec(struct task_struct *task);
 uint64 sys_exit(struct task_struct *task);
 uint64 sys_wait(struct task_struct *task);
 uint64 sys_wait_pid(struct task_struct *task);
-uint64 sys_kill(struct task_struct *task);
+uint64 sys_send_signal(struct task_struct *task);
 uint64 sys_put_char(struct task_struct *task);
 uint64 sys_get_char(struct task_struct *task);
 
-#define SYSCALL_FORK     1
-#define SYSCALL_EXEC     2
-#define SYSCALL_EXIT     3
-#define SYSCALL_WAIT     4
-#define SYSCALL_WAIT_PID 5
-#define SYSCALL_KILL     6
-#define SYSCALL_PUT_CHAR 7
-#define SYSCALL_GET_CHAR 8
+#define SYSCALL_FORK        1
+#define SYSCALL_EXEC        2
+#define SYSCALL_EXIT        3
+#define SYSCALL_WAIT        4
+#define SYSCALL_WAIT_PID    5
+#define SYSCALL_SEND_SIGNAL 6
+#define SYSCALL_PUT_CHAR    7
+#define SYSCALL_GET_CHAR    8
 
 static uint64 (*syscalls[])(struct task_struct *) = {
-    [SYSCALL_FORK]     = sys_fork,
-    [SYSCALL_EXEC]     = sys_exec,
-    [SYSCALL_EXIT]     = sys_exit,
-    [SYSCALL_WAIT]     = sys_wait,
-    [SYSCALL_WAIT_PID] = sys_wait_pid,
-    [SYSCALL_KILL]     = sys_kill,
-    [SYSCALL_PUT_CHAR] = sys_put_char,
-    [SYSCALL_GET_CHAR] = sys_get_char
+    [SYSCALL_FORK]        = sys_fork,
+    [SYSCALL_EXEC]        = sys_exec,
+    [SYSCALL_EXIT]        = sys_exit,
+    [SYSCALL_WAIT]        = sys_wait,
+    [SYSCALL_WAIT_PID]    = sys_wait_pid,
+    [SYSCALL_SEND_SIGNAL] = sys_send_signal,
+    [SYSCALL_PUT_CHAR]    = sys_put_char,
+    [SYSCALL_GET_CHAR]    = sys_get_char
 };
 
 void syscall() {
@@ -331,7 +331,7 @@ uint64 sys_wait_pid(struct task_struct *task) {
     return NULL;
 }
 
-uint64 sys_kill(struct task_struct *task) {
+uint64 sys_send_signal(struct task_struct *task) {
     // TODO
     return NULL;
 }
