@@ -263,14 +263,14 @@ uint64 exec_process(struct task_struct *task, const char *name,
 
 /** Syscall part */
 
-uint64 sys_fork(struct task_struct * task);
-uint64 sys_exec(struct task_struct * task);
-uint64 sys_exit(struct task_struct * task);
-uint64 sys_wait(struct task_struct * task);
-uint64 sys_wait_pid(struct task_struct * task);
-uint64 sys_kill(struct task_struct * task);
-uint64 sys_put_char(struct task_struct * task);
-uint64 sys_get_char(struct task_struct * task);
+uint64 sys_fork(struct task_struct *task);
+uint64 sys_exec(struct task_struct *task);
+uint64 sys_exit(struct task_struct *task);
+uint64 sys_wait(struct task_struct *task);
+uint64 sys_wait_pid(struct task_struct *task);
+uint64 sys_kill(struct task_struct *task);
+uint64 sys_put_char(struct task_struct *task);
+uint64 sys_get_char(struct task_struct *task);
 
 #define SYSCALL_FORK     1
 #define SYSCALL_EXEC     2
@@ -311,38 +311,38 @@ uint64 sys_fork(struct task_struct *task) {
     return fork_process(task);
 }
 
-uint64 sys_exec(struct task_struct * task) {
+uint64 sys_exec(struct task_struct *task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_exit(struct task_struct * task) {
+uint64 sys_exit(struct task_struct *task) {
     exit_process(task, task->trap_frame->a0);
     return 0;
 }
 
-uint64 sys_wait(struct task_struct * task) {
+uint64 sys_wait(struct task_struct *task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_wait_pid(struct task_struct * task) {
+uint64 sys_wait_pid(struct task_struct *task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_kill(struct task_struct * task) {
+uint64 sys_kill(struct task_struct *task) {
     // TODO
     return NULL;
 }
 
-uint64 sys_put_char(struct task_struct * task) {
+uint64 sys_put_char(struct task_struct *task) {
     char c = (char)task->trap_frame->a0;
     print_char(c);
     return 0;
 }
 
-uint64 sys_get_char(struct task_struct * task) {
+uint64 sys_get_char(struct task_struct *task) {
     int c;
     while ((c = uart_getc()) == -1 && runnable_tasks->size > 0) yield();
     while ((c = uart_getc()) == -1) asm volatile("wfi");
