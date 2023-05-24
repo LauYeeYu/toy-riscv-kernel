@@ -85,13 +85,14 @@ struct trap_frame {
 struct task_struct {
     // if multiple CPUs are supported, there should be a spinlock here
     enum process_state state;      // Process state
+    void *channel;                 // If non-zero, sleeping on chan
     pid_t pid;                     // Process ID
     struct task_struct *parent;    // Parent process
     void *kernel_stack;            // Virtual address of kernel stack
     uint64 memory_size;            // Size of process memory (bytes)
     pagetable_t pagetable;         // User page table
     struct trap_frame *trap_frame; // data page for trampoline.S
-    struct context context;        // swtch() here to run process
+    struct context context;        // switch_context() here to run process
     int exit_status;               // Process exit status
     char name[32];                 // Process name (debugging)
 };

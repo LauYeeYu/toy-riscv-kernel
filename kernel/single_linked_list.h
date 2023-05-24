@@ -127,4 +127,30 @@ static inline void for_each_node(struct single_linked_list *list,
     }
 }
 
+static inline int removeAt(struct single_linked_list *list, void *addr) {
+    struct single_linked_list_node *node = list->head;
+    struct single_linked_list_node *prev = NULL;
+    if (node == NULL) return -1;
+    prev = node;
+    node = node->next;
+    while (node != NULL) {
+        if (node->data == addr) {
+            if (prev == NULL) {
+                list->head = node->next;
+            } else {
+                prev->next = node->next;
+            }
+            if (node == list->tail) {
+                list->tail = prev;
+            }
+            kfree(node);
+            --(list->size);
+            return 0;
+        }
+        prev = node;
+        node = node->next;
+    }
+    return -1;
+}
+
 #endif // TOY_RISCV_KERNEL_KERNEL_SINGLE_LINKED_LIST_H

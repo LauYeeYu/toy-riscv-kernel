@@ -191,6 +191,34 @@ void reparent(void *data) {
     }
 }
 
+int has_child(struct task_struct *task) {
+    struct single_linked_list_node *node = all_tasks->head;
+    while (node != NULL) {
+        struct task_struct *child = (struct task_struct *)(node->data);
+        if (child->parent == task && child->state != ZOMBIE) return 1;
+        node = node->next;
+    }
+    return 0;
+}
+
+struct task_struct *find_task(pid_t pid) {
+    struct single_linked_list_node *node = all_tasks->head;
+    while (node != NULL) {
+        struct task_struct *task = (struct task_struct *)(node->data);
+        if (task->pid == pid) return task;
+        node = node->next;
+    }
+    return NULL;
+}
+
+struct task_struct *child_with_pid(struct task_struct *task, pid_t pid) {
+    struct task_struct *child = find_task(pid);
+    if (child != NULL && child->parent == task && child->state != ZOMBIE) {
+        return child;
+    }
+    return NULL;
+}
+
 uint64 fork_process(struct task_struct *task) {
     struct task_struct *new_task = kmalloc(sizeof(struct task_struct));
     if (new_task == NULL) return -1;
@@ -247,11 +275,25 @@ void exit_process(struct task_struct *task, int status) {
     if (task == NULL) {
         panic("exit_process: the process is NULL");
     }
+    if (task->parent == NULL) {
+        panic("exit_process: exit from init process");
+    }
     free_user_memory(task);
     task->state = ZOMBIE;
     task->exit_status = status;
     task = NULL;
     for_each_node(all_tasks, reparent);
+    if (task->parent->state == SLEEPING) {
+        if (task->parent->channel == task->parent ||
+            task->parent->channel == task) {
+            task->parent->state = RUNNABLE;
+            task->parent->trap_frame->a0 = task->pid;
+            // save in a1 temporarily
+            task->parent->trap_frame->a1 = task->exit_status;
+            push_tail(runnable_tasks,
+                      make_single_linked_list_node(task->parent));
+        }
+    }
     yield();
 }
 
@@ -259,6 +301,13 @@ uint64 exec_process(struct task_struct *task, const char *name,
                   char *const argv[]) {
     // TODO
     return NULL;
+}
+
+void sleep(struct task_struct *task, void *channel) {
+    task->state = SLEEPING;
+    task->channel = channel;
+    removeAt(runnable_tasks, task);
+    yield();
 }
 
 /** Syscall part */
@@ -322,13 +371,37 @@ uint64 sys_exit(struct task_struct *task) {
 }
 
 uint64 sys_wait(struct task_struct *task) {
-    // TODO
-    return NULL;
+    if (has_child(task) == NULL) return -1;
+    uint64 status_ptr = task->trap_frame->a0;
+    sleep(task, task);
+    // running again
+    if (status_ptr != 0) {
+        int *pa = (int *)physical_address(task->pagetable,
+                                          status_ptr);
+        if (pa != NULL) *pa = task->trap_frame->a1; // the state is saved in a1
+    }
+    return task->trap_frame->a0;
 }
 
 uint64 sys_wait_pid(struct task_struct *task) {
-    // TODO
-    return NULL;
+    int64 pid = task->trap_frame->a0;
+    void *channel;
+    if (pid == -1) {
+        if (has_child(task) == NULL) return -1;
+        channel = task;
+    } else {
+        channel = child_with_pid(task, pid);
+        if (channel == NULL) return -1;
+    }
+    uint64 status_ptr = task->trap_frame->a1;
+    sleep(task, channel);
+    // running again
+    if (status_ptr != 0) {
+        int *pa = (int *)physical_address(task->pagetable,
+                                          status_ptr);
+        if (pa != NULL) *pa = task->trap_frame->a1; // the state is saved in a1
+    }
+    return task->trap_frame->a0;
 }
 
 uint64 sys_send_signal(struct task_struct *task) {
