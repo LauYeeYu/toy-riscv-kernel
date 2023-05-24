@@ -50,18 +50,21 @@ pagetable_t create_void_pagetable();
  */
 uint64 init_virtual_memory_for_user(pagetable_t pagetable,
                                     void *src,
-                                    size_t size);
+                                    size_t size,
+                                    uint64 permission);
 
 /**
- * Initialize the page table for user processes.
- * @param pagetable the page table
- * @param data the process data
+ * Copy the memory from [start, start + size) to the target_pagetable.
+ * @param source_pagetable the source page table
+ * @param target_pagetable the target page table
+ * @param va_start the start virtual address
  * @param size the size of the data
  * @return 0 if succeed, -1 if fails
  */
-size_t init_pagetable_for_user(pagetable_t pagetable,
-                               void *data,
-                               size_t size);
+size_t copy_memory_with_pagetable(pagetable_t source_pagetable,
+                                  pagetable_t target_pagetable,
+                                  uint64 va_start,
+                                  uint64 size);
 
 /**
  * Free the memory from [start, start + size).

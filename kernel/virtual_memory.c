@@ -105,7 +105,8 @@ inline uint64 power_of_pages(uint64 size) {
 
 size_t init_virtual_memory_for_user(pagetable_t pagetable,
                                     void *src,
-                                    size_t size) {
+                                    size_t size,
+                                    uint64 permission) {
     // allocate pages
     uint64 power = power_of_pages(size);
     void *pages = allocate(power);
@@ -120,7 +121,7 @@ size_t init_virtual_memory_for_user(pagetable_t pagetable,
             pagetable,
             i * PGSIZE,
             (uint64)pages + i * PGSIZE,
-            PTE_R | PTE_W | PTE_X | PTE_U
+            permission
         );
         if (result == -1) {
             for (uint64 j = 0; j < i; j++) {
@@ -133,25 +134,45 @@ size_t init_virtual_memory_for_user(pagetable_t pagetable,
     return PGSIZE << power;
 }
 
-size_t init_pagetable_for_user(pagetable_t pagetable,
-                               void *data,
-                               size_t size) {
-    if ((uint64)data & (PGSIZE - 1) || size & (PGSIZE - 1)) {
-        panic("init_pagetable_for_user: data not aligned");
+size_t copy_memory_with_pagetable(pagetable_t source_pagetable,
+                                  pagetable_t target_pagetable,
+                                  uint64 va_start,
+                                  uint64 size) {
+    if (va_start & (PGSIZE - 1) || size & (PGSIZE - 1)) {
+        panic("copy_memory_with_pagetable: va_start or size is not page aligned");
     }
-
-    // map the pages to the pagetable
-    for (uint64 i = 0; i < size; i += PGSIZE) {
+    if (va_start + size >= MAXVA) {
+        panic("copy_memory_with_pagetable: va_start + size >= MAXVA");
+    }
+    for (uint64 offset = 0; offset < size; offset += PGSIZE) {
+        uint64 va = va_start + offset;
+        void *src = (void *)physical_address(source_pagetable, va);
+        void *dest = allocate(0);
+        if (src == NULL) {
+            panic("copy_memory_with_pagetable: memory not mapped");
+        }
+        if (dest == NULL) {
+            for (uint64 offset2 = 0; offset2 < offset; offset2 += PGSIZE) {
+                void *src2 = (void *)physical_address(source_pagetable, va_start + offset2);
+                unmap_page(target_pagetable, va_start + offset2);
+                deallocate(src2, 0);
+            }
+            return -1;
+        }
+        memcpy(dest, src, PGSIZE);
         int result = map_page(
-            pagetable,
-            i,
-            (uint64)data + i,
-            PTE_R | PTE_W | PTE_X | PTE_U
+            target_pagetable,
+            va,
+            (uint64)dest,
+            PTE_FLAGS(*pagetable_entry(source_pagetable, va, 0))
         );
         if (result == -1) {
-            for (uint64 j = 0; j < i; j += 4096) {
-                unmap_page(pagetable, j);
+            for (uint64 offset2 = 0; offset2 < offset; offset2 += PGSIZE) {
+                void *src2 = (void *)physical_address(source_pagetable, va_start + offset2);
+                unmap_page(target_pagetable, va_start + offset2);
+                deallocate(src2, 0);
             }
+            deallocate(dest, 0);
             return -1;
         }
     }

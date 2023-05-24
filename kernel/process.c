@@ -31,15 +31,21 @@ struct task_struct *new_task(
     if (task == NULL) return NULL;
     task->kernel_stack = allocate(0); // 4KiB stack is enough
     task->pagetable = create_void_pagetable();
-    if (task->pagetable == NULL) {
+    void *user_stack = allocate(0);
+    task->trap_frame = allocate(0);
+    if (task->kernel_stack == NULL || task->pagetable == NULL ||
+        user_stack == NULL || task->trap_frame == NULL) {
         deallocate(task->kernel_stack, 0);
+        deallocate(user_stack, 0);
+        deallocate(task->pagetable, 0);
         kfree(task);
         return NULL;
     }
     task->memory_size = init_virtual_memory_for_user(
         task->pagetable,
         src_memory,
-        size
+        size,
+        PTE_R | PTE_X | PTE_U
     );
     if (task->memory_size == 0) {
         deallocate(task->kernel_stack, 0);
@@ -47,9 +53,7 @@ struct task_struct *new_task(
         kfree(task);
         return NULL;
     }
-    void *user_stack = allocate(0);
     task->memory_size += PGSIZE;
-    task->trap_frame = allocate(0);
     task->trap_frame->kernel_satp = (uint64)kernel_pagetable;
     task->trap_frame->epc = 0;
     task->trap_frame->sp = task->memory_size;
@@ -188,8 +192,55 @@ void reparent(void *data) {
 }
 
 uint64 fork_process(struct task_struct *task) {
-    // TODO
-    return NULL;
+    struct task_struct *new_task = kmalloc(sizeof(struct task_struct));
+    if (new_task == NULL) return -1;
+    new_task->kernel_stack = allocate(0); // 4KiB stack is enough
+    new_task->pagetable = create_void_pagetable();
+    new_task->trap_frame = allocate(0);
+    if (new_task->kernel_stack == NULL || new_task->pagetable == NULL || new_task->trap_frame == NULL) {
+        deallocate(task->kernel_stack, 0);
+        kfree(new_task);
+        return -1;
+    }
+    new_task->memory_size = task->memory_size;
+    new_task->trap_frame = allocate(0);
+    int map_result = 0;
+    map_result |= copy_memory_with_pagetable(
+        task->pagetable,
+        new_task->pagetable,
+        0,
+        task->memory_size
+    );
+    *(new_task->trap_frame) = *(task->trap_frame);
+    new_task->trap_frame->a0 = 0; // fork() returns 0 in the child process
+    map_result |= map_page(
+        new_task->pagetable,
+        (uint64)TRAPFRAME,
+        (uint64)new_task->trap_frame,
+        PTE_R | PTE_W
+    );
+    map_result |= map_page(
+        new_task->pagetable,
+        (uint64)TRAMPOLINE,
+        (uint64)trampoline,
+        PTE_R | PTE_X
+    );
+    if (map_result != 0) {
+        deallocate(new_task->kernel_stack, 0);
+        free_memory(new_task->pagetable, 0, new_task->memory_size);
+        free_pagetable(new_task->pagetable);
+        kfree(new_task);
+        return -1;
+    }
+    new_task->state = RUNNABLE;
+    new_task->pid = next_pid++;
+    new_task->parent = task;
+    new_task->context.sp = (uint64)new_task->kernel_stack + PGSIZE;
+    new_task->context.ra = (uint64)user_trap_return;
+    strcpy(new_task->name, task->name, min(31UL, strlen(task->name)));
+    push_tail(runnable_tasks, make_single_linked_list_node(new_task));
+    push_tail(all_tasks, make_single_linked_list_node(new_task));
+    return new_task->pid;
 }
 
 void exit_process(struct task_struct *task, int status) {
@@ -246,6 +297,7 @@ void syscall() {
     if (current == NULL) panic("syscall: no task running!");
     int id = current->trap_frame->a7;
     if (id > 0 && id < sizeof(syscalls) / sizeof(syscalls[0])) {
+        // The return value should be returned to user
         current->trap_frame->a0 = syscalls[id](current);
     } else {
         print_string("syscall: unknown syscall id: ");
