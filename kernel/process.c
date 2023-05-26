@@ -7,6 +7,7 @@
 #include "print.h"
 #include "riscv.h"
 #include "riscv_defs.h"
+#include "signal_defs.h"
 #include "single_linked_list.h"
 #include "switch.h"
 #include "syscall.h"
@@ -211,6 +212,16 @@ struct task_struct *find_task(pid_t pid) {
     return NULL;
 }
 
+int is_ancestor(struct task_struct *ancestor, struct task_struct *task) {
+    if (task == NULL || ancestor == NULL) return 0;
+    struct task_struct *tmp = task->parent;
+    while (tmp != NULL) {
+        if (tmp == ancestor) return 1;
+        tmp = tmp->parent;
+    }
+    return 0;
+}
+
 struct task_struct *child_with_pid(struct task_struct *task, pid_t pid) {
     struct task_struct *child = find_task(pid);
     if (child != NULL && child->parent == task && child->state != ZOMBIE) {
@@ -405,8 +416,23 @@ uint64 sys_wait_pid(struct task_struct *task) {
 }
 
 uint64 sys_send_signal(struct task_struct *task) {
-    // TODO
-    return NULL;
+    pid_t pid = task->trap_frame->a0;
+    int signal = task->trap_frame->a1;
+    struct task_struct *target = find_task(pid);
+    if (is_ancestor(task, target) == 0) return -1;
+    switch (signal) {
+        case NOTHING: // do nothing
+            break;
+        case SIGINT:
+            exit_process(target, 143);
+            break;
+        case SIGKILL:
+            exit_process(target, 137);
+            break;
+        default:
+            break;
+    }
+    return signal;
 }
 
 uint64 sys_put_char(struct task_struct *task) {

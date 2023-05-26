@@ -114,6 +114,8 @@ int send_signal(pid_t pid, int sig);
 Send a signal to a process. The process is specified by `pid`. The `pid`
 must be positive and cannot be 1. The signal is specified by `sig`.
 
+Return 0 if succeed; -1 if failed.
+
 ### put_char
 
 ```c
