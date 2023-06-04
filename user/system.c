@@ -117,3 +117,9 @@ void put_char(int character) {
 char get_char() {
     return (char)syscall(0, 0, 0, 0, 0, 0, 0, SYSCALL_GET_CHAR);
 }
+
+int main(int argc, char *const argv[], char *const envp[]);
+
+__attribute__((noreturn)) void _start(int argc, char *const argv[], char *const envp[]) {
+    exit(main(argc, argv, envp));
+}
