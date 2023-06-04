@@ -60,7 +60,7 @@ will return -1.
 ### exec
 
 ```c
-int exec(const char *name, char *const argv[]);
+int exec(const char *name, char *const argv[], char *const envp[]);
 ```
 
 Execute a program. The program is specified by `name` and `argv`. The
@@ -69,6 +69,13 @@ will be replaced by the new program.
 
 If the exec call is successful, it will not return. If not, it will return
 -1.
+
+The length of `name`, `argv` and `envp` must be less than a page (including
+the '\0' at the end of each string).
+
+Note: different from normal syscalls, the `exec` syscall uses the fourth and
+fifth argument in the syscall ABI to kernel as the number of arguments in
+`argv` and `envp` respectively.
 
 ### exit
 
@@ -125,7 +132,7 @@ Return 0 if succeed; -1 if failed.
 ### put_char
 
 ```c
-void put_char(int char);
+void put_char(int character);
 ```
 
 Put a character on the terminal.
