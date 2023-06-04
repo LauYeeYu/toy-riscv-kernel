@@ -92,6 +92,7 @@ struct task_struct {
     uint64 memory_size;            // Size of process memory (bytes)
     pagetable_t pagetable;         // User page table
     struct trap_frame *trap_frame; // data page for trampoline.S
+    void *shared_memory;           // Shared memory for syscall
     struct context context;        // switch_context() here to run process
     int exit_status;               // Process exit status
     char name[32];                 // Process name (debugging)

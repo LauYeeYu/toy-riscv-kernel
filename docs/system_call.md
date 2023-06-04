@@ -26,6 +26,12 @@ about the convention.
 The input arguments are limited to 7 registers, i.e., `a0` to `a6`. `a7` is
 reserved for the syscall id. The return value is stored in `a0`.
 
+To boost the efficiency of copying from user space to kernel space, as well
+as copying from kernel space to user space, any related syscalls will use
+the `task->shared_memory` to send and receive data. In user space, the
+`task->shared_memory` is a page under trap frame (two page below the
+trampoline).
+
 ## Details
 
 - [fork](#fork)

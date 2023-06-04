@@ -34,8 +34,10 @@ struct task_struct *new_task(
     task->pagetable = create_void_pagetable();
     void *user_stack = allocate(0);
     task->trap_frame = allocate(0);
+    void *shared_memory = allocate(0);
     if (task->kernel_stack == NULL || task->pagetable == NULL ||
-        user_stack == NULL || task->trap_frame == NULL) {
+        user_stack == NULL || shared_memory == NULL ||
+        task->trap_frame == NULL) {
         deallocate(task->kernel_stack, 0);
         deallocate(user_stack, 0);
         deallocate(task->pagetable, 0);
@@ -90,6 +92,7 @@ struct task_struct *new_task(
     task->context.sp = (uint64)task->kernel_stack + PGSIZE;
     task->context.ra = (uint64)user_trap_return;
     strcpy(task->name, name, min(31UL, strlen(name)));
+    task->shared_memory = shared_memory;
     return task;
 }
 
@@ -236,7 +239,9 @@ uint64 fork_process(struct task_struct *task) {
     new_task->kernel_stack = allocate(0); // 4KiB stack is enough
     new_task->pagetable = create_void_pagetable();
     new_task->trap_frame = allocate(0);
-    if (new_task->kernel_stack == NULL || new_task->pagetable == NULL || new_task->trap_frame == NULL) {
+    void *new_shared_memory = allocate(0);
+    if (new_task->kernel_stack == NULL || new_task->pagetable == NULL ||
+        new_task->trap_frame == NULL || new_shared_memory == NULL) {
         deallocate(task->kernel_stack, 0);
         kfree(new_task);
         return -1;
@@ -277,6 +282,7 @@ uint64 fork_process(struct task_struct *task) {
     new_task->context.sp = (uint64)new_task->kernel_stack + PGSIZE;
     new_task->context.ra = (uint64)user_trap_return;
     strcpy(new_task->name, task->name, min(31UL, strlen(task->name)));
+    new_task->shared_memory = new_shared_memory;
     push_tail(runnable_tasks, make_single_linked_list_node(new_task));
     push_tail(all_tasks, make_single_linked_list_node(new_task));
     return new_task->pid;
@@ -387,9 +393,8 @@ uint64 sys_wait(struct task_struct *task) {
     sleep(task, task);
     // running again
     if (status_ptr != 0) {
-        int *pa = (int *)physical_address(task->pagetable,
-                                          status_ptr);
-        if (pa != NULL) *pa = task->trap_frame->a1; // the state is saved in a1
+        int *status = task->shared_memory;
+        *status = task->trap_frame->a1; // the status is saved in a1
     }
     return task->trap_frame->a0;
 }
@@ -408,9 +413,8 @@ uint64 sys_wait_pid(struct task_struct *task) {
     sleep(task, channel);
     // running again
     if (status_ptr != 0) {
-        int *pa = (int *)physical_address(task->pagetable,
-                                          status_ptr);
-        if (pa != NULL) *pa = task->trap_frame->a1; // the state is saved in a1
+        int *status = task->shared_memory;
+        *status = task->trap_frame->a1; // the status is saved in a1
     }
     return task->trap_frame->a0;
 }

@@ -63,5 +63,7 @@
 //   expandable heap
 //   ...
 //   TRAPFRAME (p->trapframe, used by the trampoline)
+//   SHARED_MEMORY (p->shared_memory, used by syscall)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
+#define SHARED_MEMORY (TRAMPOLINE - PGSIZE * 2)
