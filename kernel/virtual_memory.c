@@ -3,8 +3,10 @@
 #include "mem_manage.h"
 #include "memlayout.h"
 #include "panic.h"
+#include "process.h"
 #include "riscv_defs.h"
 #include "riscv.h"
+#include "single_linked_list.h"
 #include "types.h"
 #include "utility.h"
 
@@ -103,10 +105,10 @@ inline uint64 power_of_pages(size_t size) {
     return power;
 }
 
-size_t init_virtual_memory_for_user(pagetable_t pagetable,
-                                    void *src,
-                                    size_t size,
-                                    uint64 permission) {
+size_t map_memory(pagetable_t pagetable,
+                  void *src,
+                  size_t size,
+                  uint64 permission) {
     // allocate pages
     uint64 power = power_of_pages(size);
     void *pages = allocate(power);
@@ -134,10 +136,10 @@ size_t init_virtual_memory_for_user(pagetable_t pagetable,
     return PGSIZE << power;
 }
 
-size_t copy_memory_with_pagetable(pagetable_t source_pagetable,
-                                  pagetable_t target_pagetable,
-                                  uint64 va_start,
-                                  uint64 size) {
+int copy_memory_with_pagetable(pagetable_t source_pagetable,
+                               pagetable_t target_pagetable,
+                               uint64 va_start,
+                               uint64 size) {
     if (va_start & (PGSIZE - 1) || size & (PGSIZE - 1)) {
         panic("copy_memory_with_pagetable: va_start or size is not page aligned");
     }
@@ -173,6 +175,38 @@ size_t copy_memory_with_pagetable(pagetable_t source_pagetable,
                 deallocate(src2, 0);
             }
             deallocate(dest, 0);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int copy_all_memory_with_pagetable(struct task_struct *source,
+                                   struct task_struct *target) {
+    for (struct single_linked_list_node *node = head_node(&(source->mem_sections));
+        node != NULL;
+        node = node->next) {
+        struct memory_section *mem_section = node->data;
+        if (copy_memory_with_pagetable(
+            source->pagetable,
+            target->pagetable,
+            (uint64)mem_section->start,
+            mem_section->size
+        ) == -1) {
+            for (struct single_linked_list_node *node2 = head_node(&(target->mem_sections));
+                node2 != NULL;
+                node2 = node2->next) {
+                struct memory_section *mem_section2 = node2->data;
+                for (uint64 offset = 0; offset < mem_section2->size; offset += PGSIZE) {
+                    deallocate(
+                        (void *)physical_address(
+                            target->pagetable,
+                            (uint64)mem_section2->start + offset
+                        ),
+                        0);
+                    unmap_page(target->pagetable, (uint64)mem_section2->start + offset);
+                }
+            }
             return -1;
         }
     }

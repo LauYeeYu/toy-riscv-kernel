@@ -10,6 +10,7 @@
 #ifndef TOY_RISCV_KERNEL_KERNEL_VIRTUAL_MEMORY_H
 #define TOY_RISCV_KERNEL_KERNEL_VIRTUAL_MEMORY_H
 
+#include "process.h"
 #include "riscv.h"
 #include "types.h"
 
@@ -42,16 +43,16 @@ void init_kernel_pagetable();
 pagetable_t create_void_pagetable();
 
 /**
- * Initialize the virtual memory for user processes.
+ * Map the memory from source to [start, start + size) in the page table.
  * @param pagetable the page table
  * @param src the source address
  * @param size the size of the memory
  * @return the actual size of memory used
  */
-size_t init_virtual_memory_for_user(pagetable_t pagetable,
-                                    void *src,
-                                    size_t size,
-                                    uint64 permission);
+size_t map_memory(pagetable_t pagetable,
+                  void *src,
+                  size_t size,
+                  uint64 permission);
 
 /**
  * Copy the memory from [start, start + size) to the target_pagetable.
@@ -59,13 +60,21 @@ size_t init_virtual_memory_for_user(pagetable_t pagetable,
  * @param target_pagetable the target page table
  * @param va_start the start virtual address
  * @param size the size of the data
- * @return 0 if succeed, -1 if fails
+ * @return 0 if succeeded, -1 if failed
  */
-size_t copy_memory_with_pagetable(pagetable_t source_pagetable,
-                                  pagetable_t target_pagetable,
-                                  uint64 va_start,
-                                  uint64 size);
+int copy_memory_with_pagetable(pagetable_t source_pagetable,
+                               pagetable_t target_pagetable,
+                               uint64 va_start,
+                               uint64 size);
 
+/**
+ * Copy all the memory in mem_sections from source to target.
+ * @param source the source task
+ * @param target the target task
+ * @return 0 if succeeded, -1 if failed
+ */
+int copy_all_memory_with_pagetable(struct task_struct *source,
+                                   struct task_struct *target);
 /**
  * Free the memory from [start, start + size).
  * @param pagetable the page table

@@ -2,6 +2,7 @@
 #define TOY_RISCV_KERNEL_KERNEL_PROC_H
 
 #include "riscv.h"
+#include "single_linked_list.h"
 #include "types.h"
 
 // the current process. Since the kernel now only supports single CPU, it will
@@ -87,21 +88,26 @@ struct trap_frame {
     /* 280 */ uint64 t6;
 };
 
+struct memory_section {
+    void *start; // Align to 4KB
+    size_t size;
+};
+
 // Per-process state
 struct task_struct {
     // if multiple CPUs are supported, there should be a spinlock here
-    enum process_state state;      // Process state
-    void *channel;                 // If non-zero, sleeping on chan
-    pid_t pid;                     // Process ID
-    struct task_struct *parent;    // Parent process
-    void *kernel_stack;            // Virtual address of kernel stack
-    uint64 memory_size;            // Size of process memory (bytes)
-    pagetable_t pagetable;         // User page table
-    struct trap_frame *trap_frame; // data page for trampoline.S
-    void *shared_memory;           // Shared memory for syscall
-    struct context context;        // switch_context() here to run process
-    int exit_status;               // Process exit status
-    char name[32];                 // Process name (debugging)
+    enum process_state state;               // Process state
+    void *channel;                          // If non-zero, sleeping on chan
+    pid_t pid;                              // Process ID
+    struct task_struct *parent;             // Parent process
+    void *kernel_stack;                     // Virtual address of kernel stack
+    struct single_linked_list mem_sections; // Memory data
+    pagetable_t pagetable;                  // User page table
+    struct trap_frame *trap_frame;          // data page for trampoline.S
+    void *shared_memory;                    // Shared memory for syscall
+    struct context context;                 // switch_context() here
+    int exit_status;                        // Process exit status
+    char name[32];                          // Process name (debugging)
 };
 
 struct task_struct *current_task();
@@ -114,12 +120,7 @@ struct task_struct *current_task();
  * @param size the size of the memory
  * @return the task_struct of the new process, NULL if failed
  */
-struct task_struct *new_task(
-    const char *name,
-    struct task_struct *parent,
-    void *src_memory,
-    size_t size
-);
+struct task_struct *new_task(const char *name, struct task_struct *parent);
 
 /**
  * Free the memory of the user process. This function should be called when the
