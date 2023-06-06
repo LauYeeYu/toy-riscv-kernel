@@ -18,7 +18,7 @@ typedef signed long  int64;
 typedef uint64 pte_t;
 typedef uint64 size_t;
 typedef uint64 reg_t;
-typedef uint64 pid_t;
+typedef int64  pid_t;
 
 #define NULL (0)
 
