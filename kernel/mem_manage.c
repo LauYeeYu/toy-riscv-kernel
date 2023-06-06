@@ -11,7 +11,7 @@
 #include "defs.h"
 
 // In entry.S
-size_t get_kernel_end();
+uint64 get_kernel_end();
 
 #define BUDDY_MAX_ORDER (15)
 #define KERNEL_START (0x80000000ull)

@@ -97,8 +97,8 @@ pagetable_t create_void_pagetable() {
     return pagetable;
 }
 
-inline uint64 power_of_pages(uint64 size) {
-    size_t power = 0;
+inline uint64 power_of_pages(size_t size) {
+    uint64 power = 0;
     while ((PGSIZE << power) < size) power++;
     return power;
 }

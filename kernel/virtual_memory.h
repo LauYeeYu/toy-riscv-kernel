@@ -48,7 +48,7 @@ pagetable_t create_void_pagetable();
  * @param size the size of the memory
  * @return the actual size of memory used
  */
-uint64 init_virtual_memory_for_user(pagetable_t pagetable,
+size_t init_virtual_memory_for_user(pagetable_t pagetable,
                                     void *src,
                                     size_t size,
                                     uint64 permission);
