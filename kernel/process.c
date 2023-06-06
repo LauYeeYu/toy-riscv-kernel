@@ -21,6 +21,9 @@ extern pagetable_t kernel_pagetable;
 
 pid_t next_pid = 1;
 
+void *stack_to_remove = NULL;
+void *stack_to_remove_next = NULL;
+
 struct task_struct *new_task(
     const char *name,
     struct task_struct *parent,
@@ -97,7 +100,7 @@ struct task_struct *new_task(
 }
 
 void free_user_memory(struct task_struct *task) {
-    deallocate(task->kernel_stack, 0);
+    stack_to_remove_next = task->kernel_stack;
     deallocate(task->trap_frame, 0);
     deallocate(task->shared_memory, 0);
     free_memory(task->pagetable, 0, task->memory_size);
@@ -145,6 +148,9 @@ void scheduler() {
 
 void yield() {
     interrupt_off();
+    deallocate(stack_to_remove, 0);
+    stack_to_remove = stack_to_remove_next;
+    stack_to_remove_next = NULL;
     struct context *old_context = &now_context;
     struct task_struct *task = current_task();
     if (task != NULL) {
