@@ -99,6 +99,7 @@ struct task_struct *new_task(
 void free_user_memory(struct task_struct *task) {
     deallocate(task->kernel_stack, 0);
     deallocate(task->trap_frame, 0);
+    deallocate(task->shared_memory, 0);
     free_memory(task->pagetable, 0, task->memory_size);
     free_pagetable(task->pagetable);
 }
