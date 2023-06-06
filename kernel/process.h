@@ -8,7 +8,13 @@
 // always be the current process.
 static inline int cpuid() { return 0; }
 
-enum process_state { SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum process_state {
+    SLEEPING, // blocked
+    RUNNABLE, // ready to run, but not running
+    RUNNING, // running on CPU
+    ZOMBIE, // exited but have to be waited by parent
+    DEAD // exited and no need to be waited by parent
+};
 
 // Saved registers for kernel context switches.
 struct context {

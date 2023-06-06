@@ -195,14 +195,28 @@ void reparent(void *data) {
     }
 }
 
-int has_child(struct task_struct *task) {
+int is_alive(struct task_struct *task) {
+    return task != NULL && (task->state != ZOMBIE || task->state != DEAD);
+}
+
+int has_alive_child(struct task_struct *task) {
     struct single_linked_list_node *node = all_tasks->head;
     while (node != NULL) {
         struct task_struct *child = (struct task_struct *)(node->data);
-        if (child->parent == task && child->state != ZOMBIE) return 1;
+        if (child->parent == task && is_alive(child)) return 1;
         node = node->next;
     }
     return 0;
+}
+
+struct task_struct *get_one_zombie_child(struct task_struct *task) {
+    struct single_linked_list_node *node = all_tasks->head;
+    while (node != NULL) {
+        struct task_struct *child = (struct task_struct *)(node->data);
+        if (child->parent == task && child->state == ZOMBIE) return child;
+        node = node->next;
+    }
+    return NULL;
 }
 
 struct task_struct *find_task(pid_t pid) {
@@ -388,8 +402,17 @@ uint64 sys_exit(struct task_struct *task) {
 }
 
 uint64 sys_wait(struct task_struct *task) {
-    if (has_child(task) == NULL) return -1;
+    struct task_struct *zombie_child = get_one_zombie_child(task);
     uint64 status_ptr = task->trap_frame->a0;
+    if (zombie_child != NULL) {
+        if (status_ptr != 0) {
+            int *status = task->shared_memory;
+            *status = zombie_child->exit_status;
+        }
+        zombie_child->state = DEAD;
+        return zombie_child->pid;
+    }
+    if (has_alive_child(task) == NULL) return -1;
     sleep(task, task);
     // running again
     if (status_ptr != 0) {
@@ -400,16 +423,33 @@ uint64 sys_wait(struct task_struct *task) {
 }
 
 uint64 sys_wait_pid(struct task_struct *task) {
-    int64 pid = task->trap_frame->a0;
-    void *channel;
+    pid_t pid = task->trap_frame->a0;
+    void *channel = NULL;
+    struct task_struct *zombie_child = NULL;
     if (pid == -1) {
-        if (has_child(task) == NULL) return -1;
+        zombie_child = get_one_zombie_child(task);
+        if (zombie_child == NULL) {
+            if (has_alive_child(task) == NULL) return -1;
+        }
         channel = task;
     } else {
-        channel = child_with_pid(task, pid);
-        if (channel == NULL) return -1;
+        struct task_struct *child = child_with_pid(task, pid);
+        if (child == NULL) return -1;
+        if (child->state == ZOMBIE) {
+            zombie_child = child;
+        } else {
+            channel = child;
+        }
     }
     uint64 status_ptr = task->trap_frame->a1;
+    if (zombie_child != NULL) {
+        if (status_ptr != 0) {
+            int *status = task->shared_memory;
+            *status = zombie_child->exit_status;
+        }
+        zombie_child->state = DEAD;
+        return zombie_child->pid;
+    }
     sleep(task, channel);
     // running again
     if (status_ptr != 0) {
@@ -423,15 +463,15 @@ uint64 sys_send_signal(struct task_struct *task) {
     pid_t pid = task->trap_frame->a0;
     int signal = task->trap_frame->a1;
     struct task_struct *target = find_task(pid);
-    if (is_ancestor(task, target) == 0) return -1;
+    if (is_ancestor(task, target) == 0 || is_alive(target)) return -1;
     switch (signal) {
         case NOTHING: // do nothing
             break;
         case SIGINT:
-            exit_process(target, 143);
+            exit_process(target, 2);
             break;
         case SIGKILL:
-            exit_process(target, 137);
+            exit_process(target, 9);
             break;
         default:
             break;
