@@ -15,14 +15,17 @@ struct single_linked_list {
     int64 size;
 };
 
+static inline void init_single_linked_list(struct single_linked_list *list) {
+    list->head = NULL;
+    list->tail = NULL;
+    list->size = 0;
+}
 
 static inline struct single_linked_list *create_single_linked_list() {
     struct single_linked_list *list =
         (struct single_linked_list *)kmalloc(sizeof(struct single_linked_list));
     if (list == NULL) return NULL;
-    list->head = NULL;
-    list->tail = NULL;
-    list->size = 0;
+    init_single_linked_list(list);
     return list;
 }
 
