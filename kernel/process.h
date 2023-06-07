@@ -102,6 +102,7 @@ struct task_struct {
     struct task_struct *parent;             // Parent process
     void *kernel_stack;                     // Virtual address of kernel stack
     struct single_linked_list mem_sections; // Memory data
+    uint64 stack_permission;                // Stack permission
     pagetable_t pagetable;                  // User page table
     struct trap_frame *trap_frame;          // data page for trampoline.S
     void *shared_memory;                    // Shared memory for syscall

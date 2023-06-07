@@ -29,6 +29,8 @@ struct task_struct *new_task(const char *name, struct task_struct *parent) {
     struct task_struct *task = kmalloc(sizeof(struct task_struct));
     if (task == NULL) return NULL;
     task->kernel_stack = allocate(0); // 4KiB stack is enough
+    task->stack_permission = PTE_U | PTE_R | PTE_W;
+    init_single_linked_list(&(task->mem_sections));
     task->pagetable = create_void_pagetable();
     void *user_stack = allocate(0);
     task->trap_frame = allocate(0);
