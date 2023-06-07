@@ -19,6 +19,10 @@ OBJS = \
   $K/uart.o \
   $K/virtual_memory.o
 
+USER_LIB = \
+  $U/syscall.o \
+  $U/system.o
+
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
 #TOOLPREFIX = 
@@ -67,6 +71,11 @@ $K/kernel: $(OBJS) $K/kernel.ld
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
+$U/bin/%: $U/%.o $(USER_LIB)
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
+	$(OBJDUMP) -S $@ > $U/$*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
+
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
 # details:
@@ -75,6 +84,10 @@ $K/kernel: $(OBJS) $K/kernel.ld
 
 -include kernel/*.d
 
+.PHONY: kernel
+kernel: $K/kernel
+
+.PHONY: clean
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*/*.o */*.d */*.asm */*.sym kernel/kernel
@@ -89,15 +102,18 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 
+.PHONY: qemu
 qemu: $K/kernel
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
+.PHONY: qemu-gdb
 qemu-gdb: $K/kernel .gdbinit
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
+.PHONY: launch-gdb
 launch-gdb:
 	$(TOOLPREFIX)gdb -ex 'file kernel/kernel' -ex 'set arch riscv:rv64' -ex 'target remote localhost:26000'
