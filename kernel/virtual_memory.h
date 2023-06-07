@@ -113,4 +113,34 @@ int map_page(pagetable_t pagetable,
  */
 int unmap_page(pagetable_t pagetable, uint64 va);
 
+/**
+ * Map the page from src to a page at pa in page table for user.
+ * The va and size do not need to be page aligned.
+ * @param pagetable the page table
+ * @param va the virtual address
+ * @param src the source address
+ * @param size the size of the memory
+ * @param permission the permission of the page, see riscv_defs.h for details
+ */
+int map_page_for_user(pagetable_t pagetable,
+                      uint64 va,
+                      void *src,
+                      size_t size,
+                      uint64 permission);
+
+/**
+ * Map the section from src to a section at va_start in page table for user.
+ * The va_start and size do not need to be page aligned.
+ * @param pagetable the page table
+ * @param va_start the start virtual address
+ * @param src the source address
+ * @param size the size of the memory
+ * @param permission the permission of the page, see riscv_defs.h for details
+ */
+int map_section_for_user(pagetable_t pagetable,
+                         uint64 va_start,
+                         void *src,
+                         size_t size,
+                         uint64 permission);
+
 #endif // TOY_RISCV_KERNEL_KERNEL_VIRTUAL_MEMORY_H
