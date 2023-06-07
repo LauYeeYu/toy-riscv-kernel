@@ -7,7 +7,7 @@
     typeof(a) __max1__ = (a);                    \
     typeof(b) __max2__ = (b);                    \
     (void)(&__max1__ == &__max2__);              \
-    __max1__ > __max2__ ? __max1__ : __min2__;})
+    __max1__ > __max2__ ? __max1__ : __max2__;})
 
 #define min(a, b) ({                             \
     typeof(a) __min1__ = (a);                    \
