@@ -72,6 +72,9 @@ $K/kernel: $(OBJS) $K/kernel.ld
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
+$U/bin/init: $U/bin/$(init)
+	cp $< $U/bin/init
+
 $U/bin/%: $U/%.o $(USER_LIB)
 	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
 	$(OBJDUMP) -S $@ > $U/$*.asm
@@ -104,7 +107,7 @@ QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 
 .PHONY: qemu
-qemu: $K/kernel
+qemu: $U/bin/init $K/kernel
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv

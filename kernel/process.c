@@ -127,7 +127,7 @@ struct task_struct *current_task() {
     return (struct task_struct *)(running_task->data);
 }
 
-extern char init_hello[];
+extern char init_program[];
 
 void init_scheduler() {
     runnable_tasks = create_single_linked_list();
@@ -136,7 +136,7 @@ void init_scheduler() {
     if (init_task == NULL) {
         panic("init_scheduler: cannot create init task");
     }
-    load_elf(init_hello, init_task);
+    load_elf(init_program, init_task);
     void *init_stack = allocate(0);
     if (init_stack == NULL) {
         panic("init_scheduler: cannot allocate init stack");

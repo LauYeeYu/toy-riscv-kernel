@@ -1,4 +1,4 @@
     .section .data
-    .global init_hello
-init_hello:
-.incbin "user/bin/hello"
+    .global init_program
+init_program:
+.incbin "user/bin/init"
