@@ -29,7 +29,7 @@ static inline struct single_linked_list *create_single_linked_list() {
     return list;
 }
 
-static inline void single_linked_list_destroy(struct single_linked_list *list) {
+static inline void clear_single_linked_list(struct single_linked_list *list) {
     if (list == NULL) return;
     struct single_linked_list_node *node = list->head;
     while (node != NULL) {
@@ -37,6 +37,12 @@ static inline void single_linked_list_destroy(struct single_linked_list *list) {
         kfree(node);
         node = next;
     }
+    init_single_linked_list(list);
+}
+
+static inline void single_linked_list_destroy(struct single_linked_list *list) {
+    if (list == NULL) return;
+    clear_single_linked_list(list);
     kfree(list);
 }
 
