@@ -100,9 +100,11 @@ void free_user_memory(struct task_struct *task) {
          node != NULL;
          node = node->next) {
         struct memory_section *mem_section = node->data;
-        free_memory(pagetable, (uint64)mem_section->start, mem_section->size);
+        free_memory(pagetable, mem_section->start, mem_section->size);
+        kfree(mem_section);
     }
     free_memory(pagetable, task->stack.start, task->stack.size);
+    clear_single_linked_list(&(task->mem_sections));
     free_pagetable(pagetable);
 }
 
