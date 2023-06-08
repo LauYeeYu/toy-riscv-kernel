@@ -190,9 +190,9 @@ int copy_all_memory_with_pagetable(struct task_struct *source,
         if (copy_memory_with_pagetable(
             source->pagetable,
             target->pagetable,
-            (uint64)mem_section->start,
+            mem_section->start,
             mem_section->size
-        ) == -1) {
+        ) != 0) {
             for (struct single_linked_list_node *node2 = head_node(&(target->mem_sections));
                 node2 != NULL;
                 node2 = node2->next) {
@@ -208,6 +208,23 @@ int copy_all_memory_with_pagetable(struct task_struct *source,
                 }
             }
             return -1;
+        }
+    }
+    if (copy_memory_with_pagetable(source->pagetable, target->pagetable,
+                                   source->stack.start, source->stack.size) != 0) {
+        for (struct single_linked_list_node *node2 = head_node(&(target->mem_sections));
+            node2 != NULL;
+            node2 = node2->next) {
+            struct memory_section *mem_section2 = node2->data;
+            for (uint64 offset = 0; offset < mem_section2->size; offset += PGSIZE) {
+                deallocate(
+                    (void *)physical_address(
+                        target->pagetable,
+                        (uint64)mem_section2->start + offset
+                    ),
+                    0);
+                unmap_page(target->pagetable, (uint64)mem_section2->start + offset);
+            }
         }
     }
     return 0;

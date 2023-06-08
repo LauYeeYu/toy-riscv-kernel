@@ -13,6 +13,7 @@
 #include "switch.h"
 #include "syscall.h"
 #include "trap.h"
+#include "types.h"
 #include "uart.h"
 #include "virtual_memory.h"
 #include "utility.h"
@@ -33,16 +34,13 @@ struct task_struct *new_task(const char *name, struct task_struct *parent) {
     task->stack_permission = PTE_U | PTE_R | PTE_W;
     init_single_linked_list(&(task->mem_sections));
     task->pagetable = create_void_pagetable();
-    void *user_stack = allocate(0);
     task->trap_frame = allocate(0);
     void *shared_memory = allocate(0);
     memset(task->trap_frame, 0, PGSIZE); // to avoid kernel memory leak
     memset(&(task->context), 0, sizeof(struct context));
     if (task->kernel_stack == NULL || task->pagetable == NULL ||
-        user_stack == NULL || shared_memory == NULL ||
-        task->trap_frame == NULL) {
+        shared_memory == NULL || task->trap_frame == NULL) {
         deallocate(task->kernel_stack, 0);
-        deallocate(user_stack, 0);
         deallocate(task->pagetable, 0);
         kfree(task);
         return NULL;
@@ -71,6 +69,8 @@ struct task_struct *new_task(const char *name, struct task_struct *parent) {
     task->parent = parent;
     task->context.sp = (uint64)task->kernel_stack + PGSIZE;
     task->context.ra = (uint64)user_trap_return;
+    task->stack.size = 0;
+    task->stack.start = 0;
     strcpy(task->name, name, min(31UL, strlen(name)));
     task->shared_memory = shared_memory;
     return task;
@@ -93,7 +93,7 @@ struct task_struct *new_task_with_data(
         kfree(tmp_data);
         return NULL;
     }
-    tmp_data->start = src_memory;
+    tmp_data->start = 0UL;
     tmp_data->size = size;
     push_tail(&(task->mem_sections), tmp);
     if (map_memory(task->pagetable,
@@ -108,6 +108,21 @@ struct task_struct *new_task_with_data(
     return task;
 }
 
+int register_memory_section(struct task_struct *task, uint64 va, size_t size) {
+    typedef struct memory_section memory_section;
+    memory_section *tmp_data = kmalloc(sizeof(memory_section));
+    struct single_linked_list_node *tmp = make_single_linked_list_node(tmp_data);
+    if (tmp == NULL || tmp_data == NULL) {
+        kfree(tmp_data);
+        kfree(tmp);
+        return -1;
+    }
+    tmp_data->start = va;
+    tmp_data->size = size;
+    push_tail(&(task->mem_sections), tmp);
+    return 0;
+}
+
 void free_user_memory(struct task_struct *task) {
     pagetable_t pagetable = task->pagetable;
     stack_to_remove_next = task->kernel_stack;
@@ -119,6 +134,7 @@ void free_user_memory(struct task_struct *task) {
         struct memory_section *mem_section = node->data;
         free_memory(pagetable, (uint64)mem_section->start, mem_section->size);
     }
+    free_memory(pagetable, task->stack.start, task->stack.size);
     free_pagetable(pagetable);
 }
 
@@ -146,16 +162,16 @@ void init_scheduler() {
     }
     load_elf(init_hello, init_task);
     void *init_stack = allocate(0);
-    struct memory_section *init_mem_section = kmalloc(sizeof(struct memory_section));
-    init_mem_section->start = (void *)(SHARED_MEMORY - PGSIZE);
-    init_mem_section->size = PGSIZE;
-    push_tail(&init_task->mem_sections, make_single_linked_list_node(init_mem_section));
-
     if (init_stack == NULL) {
         panic("init_scheduler: cannot allocate init stack");
     }
+    init_task->stack.start = SHARED_MEMORY - PGSIZE;
+    init_task->stack.size = PGSIZE;
     init_task->trap_frame->sp = SHARED_MEMORY;
-    map_page(init_task->pagetable, SHARED_MEMORY - PGSIZE, (uint64)init_stack, PTE_R | PTE_W | PTE_U);
+    if (map_page(init_task->pagetable, SHARED_MEMORY - PGSIZE,
+                 (uint64)init_stack, PTE_R | PTE_W | PTE_U) != 0) {
+        panic("init_scheduler: cannot map init stack");
+    }
 
     push_tail(all_tasks, make_single_linked_list_node(init_task));
     push_tail(runnable_tasks, make_single_linked_list_node(init_task));

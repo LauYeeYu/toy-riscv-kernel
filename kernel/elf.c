@@ -32,6 +32,9 @@ int load_elf(void *elf, struct task_struct *task) {
 
         void *src_addr = (void *)((uint64)elf + phdr[i].p_offset);
         uint64 va = phdr[i].p_vaddr;
+        size_t size = phdr[i].p_filesz;
+        size_t section_start = PGROUNDDOWN(va);
+        size_t section_size = PGROUNDUP(va + size) - section_start;
 
         // flags
         uint64 permission = PTE_U;
@@ -40,10 +43,15 @@ int load_elf(void *elf, struct task_struct *task) {
         if (phdr[i].p_flags & PF_X) permission |= PTE_X;
         
         if (map_section_for_user(task->pagetable, va,
-                                 src_addr, phdr[i].p_filesz,
+                                 src_addr, size,
                                  permission) != 0) {
             return -1;
-        } 
+        }
+        // TODO: memleak
+        if (register_memory_section(task, section_start, section_size)) {
+            free_memory(task->pagetable, va, section_size);
+            return -1;
+        }
     }
 
     task->trap_frame->epc = ehdr->e_entry;

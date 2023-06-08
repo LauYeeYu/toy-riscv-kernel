@@ -89,7 +89,7 @@ struct trap_frame {
 };
 
 struct memory_section {
-    void *start; // Align to 4KB
+    uint64 start; // Align to 4KB
     size_t size;
 };
 
@@ -103,6 +103,7 @@ struct task_struct {
     void *kernel_stack;                     // Virtual address of kernel stack
     struct single_linked_list mem_sections; // Memory data
     uint64 stack_permission;                // Stack permission
+    struct memory_section stack;           // Stack memory section
     pagetable_t pagetable;                  // User page table
     struct trap_frame *trap_frame;          // data page for trampoline.S
     void *shared_memory;                    // Shared memory for syscall
@@ -122,6 +123,12 @@ struct task_struct *current_task();
  * @return the task_struct of the new process, NULL if failed
  */
 struct task_struct *new_task(const char *name, struct task_struct *parent);
+
+/**
+ * Register a memory section for the user process. This should be called every
+ * time when the user process allocates a new memory section.
+ */
+int register_memory_section(struct task_struct *task, uint64 va, size_t size);
 
 /**
  * Free the memory of the user process. This function should be called when the
