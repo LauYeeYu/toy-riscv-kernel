@@ -8,8 +8,21 @@
 #include "virtual_memory.h"
 #include "utility.h"
 
+int check_elf_magic(uint8 *elf) {
+    if (elf[EI_MAG0] != ELFMAG0 ||
+        elf[EI_MAG1] != ELFMAG1 ||
+        elf[EI_MAG2] != ELFMAG2 ||
+        elf[EI_MAG3] != ELFMAG3) {
+        return -1;
+    }
+    return 0;
+}
+
 int load_elf(void *elf, struct task_struct *task) {
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf;
+    //check magic number
+    if (check_elf_magic(elf) != 0) return -1;
+
     Elf64_Phdr *phdr = (Elf64_Phdr *)((uint64)elf + ehdr->e_phoff);
 
     for (int i = 0; i < ehdr->e_phnum; i++)
