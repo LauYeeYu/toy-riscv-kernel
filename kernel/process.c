@@ -167,6 +167,7 @@ void yield() {
     stack_to_remove_next = NULL;
     struct context *old_context = &now_context;
     struct task_struct *task = current_task();
+    if (runnable_tasks->size == 0) return;
     if (task != NULL) {
         task->state = RUNNABLE;
         push_tail(runnable_tasks, running_task);
