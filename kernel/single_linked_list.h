@@ -64,18 +64,21 @@ tail_node(struct single_linked_list *list) {
     return list->tail;
 }
 
-static inline void pop_head(struct single_linked_list *list) {
+static inline void pop_head_without_free(struct single_linked_list *list) {
     if (list->head == NULL) return;
     if (list->head == list->tail) {
-        kfree(list->head);
         list->head = NULL;
         list->tail = NULL;
     } else {
-        struct single_linked_list_node *node = list->head;
-        list->head = node->next;
-        kfree(node);
+        list->head = list->head->next;
     }
     --(list->size);
+}
+
+static inline void pop_head(struct single_linked_list *list) {
+    struct single_linked_list_node *node = list->head;
+    pop_head_without_free(list);
+    kfree(node);
 }
 
 static inline struct single_linked_list_node *

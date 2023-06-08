@@ -164,7 +164,7 @@ void scheduler() {
             struct single_linked_list_node *task_node = head_node(runnable_tasks);
             running_task = task_node;
             struct task_struct *task = task_node->data;
-            pop_head(runnable_tasks);
+            pop_head_without_free(runnable_tasks);
             switch_context(&now_context, &(task->context));
         }
         interrupt_on();
@@ -200,7 +200,7 @@ void yield() {
     running_task = next_task_to_run();
     if (running_task == NULL) panic("yield: no task to run");
     struct task_struct *new_task = current_task();
-    pop_head(runnable_tasks);
+    pop_head_without_free(runnable_tasks);
     new_task->state = RUNNING;
     interrupt_on();
     switch_context(old_context, &(new_task->context));
