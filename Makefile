@@ -2,8 +2,9 @@ K=kernel
 U=user
 
 OBJS = \
-  $K/elf.o \
+  $K/init.o \
   $K/entry.o \
+  $K/elf.o \
   $K/kernel_vectors.o \
   $K/main.o \
   $K/mem_manage.o \

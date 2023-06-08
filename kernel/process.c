@@ -1,6 +1,7 @@
 #include "process.h"
 
 #include "defs.h"
+#include "elf.h"
 #include "mem_manage.h"
 #include "memlayout.h"
 #include "panic.h"
@@ -134,12 +135,31 @@ struct task_struct *current_task() {
     return (struct task_struct *)(running_task->data);
 }
 
+extern char init_hello[];
+
 void init_scheduler() {
     runnable_tasks = create_single_linked_list();
     all_tasks = create_single_linked_list();
-#ifndef TOY_RISCV_KERNEL_TEST_SCHEDULER
-    //TODO: add /init here
-#endif // NOT TOY_RISCV_KERNEL_TEST_SCHEDULER
+    struct task_struct *init_task = new_task("init", NULL);
+    if (init_task == NULL) {
+        panic("init_scheduler: cannot create init task");
+    }
+    load_elf(init_hello, init_task);
+    void *init_stack = allocate(0);
+    struct memory_section *init_mem_section = kmalloc(sizeof(struct memory_section));
+    init_mem_section->start = (void *)(SHARED_MEMORY - PGSIZE);
+    init_mem_section->size = PGSIZE;
+    push_tail(&init_task->mem_sections, make_single_linked_list_node(init_mem_section));
+
+    if (init_stack == NULL) {
+        panic("init_scheduler: cannot allocate init stack");
+    }
+    init_task->trap_frame->sp = SHARED_MEMORY;
+    map_page(init_task->pagetable, SHARED_MEMORY - PGSIZE, (uint64)init_stack, PTE_R | PTE_W | PTE_U);
+
+    push_tail(all_tasks, make_single_linked_list_node(init_task));
+    push_tail(runnable_tasks, make_single_linked_list_node(init_task));
+    init = init_task;
 }
 
 void scheduler() {
@@ -276,6 +296,7 @@ uint64 fork_process(struct task_struct *task) {
     map_result |= copy_all_memory_with_pagetable(task, child);
     *(child->trap_frame) = *(task->trap_frame);
     child->trap_frame->a0 = 0; // fork() returns 0 in the child process
+    child->trap_frame->epc += 4;
     if (map_result != 0) {
         free_user_memory(task);
         kfree(task);
@@ -363,6 +384,7 @@ void syscall() {
     if (id > 0 && id < sizeof(syscalls) / sizeof(syscalls[0])) {
         // The return value should be returned to user
         current->trap_frame->a0 = syscalls[id](current);
+        current->trap_frame->epc += 4;
     } else {
         print_string("syscall: unknown syscall id: ");
         print_int(id, 10);
