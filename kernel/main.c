@@ -19,6 +19,7 @@ int main() {
     plicinit();      // set up interrupt controller
     plicinithart();  // ask PLIC for device interrupts
     init_scheduler();
+    scheduler();
     test();
     return 0;
 }
