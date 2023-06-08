@@ -47,7 +47,6 @@ int load_elf(void *elf, struct task_struct *task) {
                                  permission) != 0) {
             return -1;
         }
-        // TODO: memleak
         if (register_memory_section(task, section_start, section_size)) {
             free_memory(task->pagetable, va, section_size);
             return -1;
