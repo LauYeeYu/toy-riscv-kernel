@@ -76,38 +76,6 @@ struct task_struct *new_task(const char *name, struct task_struct *parent) {
     return task;
 }
 
-struct task_struct *new_task_with_data(
-    const char *name,
-    struct task_struct *parent,
-    void *src_memory,
-    size_t size
-) {
-    struct task_struct *task = new_task(name, parent);
-    if (task == NULL) return NULL;
-    typedef struct memory_section memory_section;
-    memory_section *tmp_data = kmalloc(sizeof(memory_section));
-    struct single_linked_list_node *tmp = make_single_linked_list_node(tmp_data);
-    if (tmp == NULL || tmp_data == NULL) {
-        free_user_memory(task);
-        kfree(task);
-        kfree(tmp_data);
-        return NULL;
-    }
-    tmp_data->start = 0UL;
-    tmp_data->size = size;
-    push_tail(&(task->mem_sections), tmp);
-    if (map_memory(task->pagetable,
-                   src_memory,
-                   size,
-                   PTE_R | PTE_W | PTE_X | PTE_U) == 0) {
-        free_user_memory(task);
-        kfree(task);
-        return NULL;
-    }
-    // TODO: stack
-    return task;
-}
-
 int register_memory_section(struct task_struct *task, uint64 va, size_t size) {
     typedef struct memory_section memory_section;
     memory_section *tmp_data = kmalloc(sizeof(memory_section));
@@ -232,6 +200,37 @@ uint32 program2[] = {
     0x00b50023, // sb a1,0(a0)
     0xbfd5 // j 0
 };
+
+struct task_struct *new_task_with_data(
+    const char *name,
+    struct task_struct *parent,
+    void *src_memory,
+    size_t size
+) {
+    struct task_struct *task = new_task(name, parent);
+    if (task == NULL) return NULL;
+    typedef struct memory_section memory_section;
+    memory_section *tmp_data = kmalloc(sizeof(memory_section));
+    struct single_linked_list_node *tmp = make_single_linked_list_node(tmp_data);
+    if (tmp == NULL || tmp_data == NULL) {
+        free_user_memory(task);
+        kfree(task);
+        kfree(tmp_data);
+        return NULL;
+    }
+    tmp_data->start = 0UL;
+    tmp_data->size = size;
+    push_tail(&(task->mem_sections), tmp);
+    if (map_memory(task->pagetable,
+                   src_memory,
+                   size,
+                   PTE_R | PTE_W | PTE_X | PTE_U) == 0) {
+        free_user_memory(task);
+        kfree(task);
+        return NULL;
+    }
+    return task;
+}
 
 void test_scheduler() {
     struct task_struct *task1 = new_task_with_data("task1", NULL, program1, sizeof(program1));

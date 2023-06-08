@@ -153,6 +153,13 @@ void yield();
  */
 void syscall();
 
+uint64 fork_process(struct task_struct *task);
+
+void exit_process(struct task_struct *task, int status);
+
+uint64 exec_process(struct task_struct *task, const char *name,
+                    char *const argv[]);
+
 #ifdef TOY_RISCV_KERNEL_TEST_SCHEDULER
 void test_scheduler();
 #endif // TOY_RISCV_KERNEL_TEST_SCHEDULER

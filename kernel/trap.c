@@ -12,7 +12,18 @@
 #include "uart.h"
 
 
-enum cause { UNKNOWN, SYSCALL, TIMER, UART, VIRTIO };
+enum cause {
+    UNKNOWN,
+    SYSCALL,
+    TIMER,
+    UART,
+    VIRTIO,
+    // user fault
+    ILLEGAL_INSTRUCTION,
+    INSTRUCTION_PAGE_FAULT,
+    LOAD_PAGE_FAULT,
+    STORE_PAGE_FAULT
+};
 
 enum cause supervisor_trap_cause() {
     uint64 scause = read_scause();
@@ -51,6 +62,18 @@ enum cause supervisor_trap_cause() {
         case 8: { // Environment call from U-mode (ACTUALLY syscall)
             return SYSCALL;
         }
+        case 2: { // Illegal instruction
+            return ILLEGAL_INSTRUCTION;
+        }
+        case 12: { // Instruction page fault
+            return INSTRUCTION_PAGE_FAULT;
+        }
+        case 13: { // Load page fault
+            return LOAD_PAGE_FAULT;
+        }
+        case 15: { // Store page fault
+            return STORE_PAGE_FAULT;
+        }
         default: {
             return UNKNOWN;
         }
@@ -84,8 +107,25 @@ void user_trap() {
             syscall();
             break;
         }
+        case ILLEGAL_INSTRUCTION: {
+            print_string("Illegal instruction\n");
+            exit_process(task, -1);
+        }
+        case INSTRUCTION_PAGE_FAULT: {
+            print_string("Instruction page fault\n");
+            exit_process(task, -1);
+        }
+        case LOAD_PAGE_FAULT: {
+            print_string("Load page fault\n");
+            exit_process(task, -1);
+        }
+        case STORE_PAGE_FAULT: {
+            print_string("Store page fault\n");
+            exit_process(task, -1);
+        }
         default:
             break;
+            //panic("user_trap: unexpected trap cause");
     }
 
     user_trap_return();
