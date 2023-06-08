@@ -59,6 +59,12 @@ struct task_struct *new_task(const char *name, struct task_struct *parent) {
         (uint64)trampoline,
         PTE_R | PTE_X
     );
+    map_result |= map_page(
+        task->pagetable,
+        (uint64)SHARED_MEMORY,
+        (uint64)shared_memory,
+        PTE_R | PTE_W | PTE_U
+    );
     if (map_result != 0) {
         free_user_memory(task);
         kfree(task);
