@@ -163,7 +163,18 @@ void scheduler() {
         }
         interrupt_on();
     }
+}
 
+struct single_linked_list_node *next_task_to_run() {
+    if (runnable_tasks->size == 0) return NULL;
+    struct single_linked_list_node *candidate_node = head_node(runnable_tasks);
+    struct task_struct *candidate = candidate_node->data;
+    while (candidate != NULL && candidate->state != RUNNABLE) {
+        pop_head(runnable_tasks);
+        candidate_node = head_node(runnable_tasks);
+        candidate = candidate_node->data;
+    }
+    return candidate_node;
 }
 
 void yield() {
@@ -180,7 +191,8 @@ void yield() {
         old_context = &(task->context);
     }
 
-    running_task = head_node(runnable_tasks);
+    running_task = next_task_to_run();
+    if (running_task == NULL) panic("yield: no task to run");
     struct task_struct *new_task = current_task();
     pop_head(runnable_tasks);
     new_task->state = RUNNING;
