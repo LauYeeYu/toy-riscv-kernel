@@ -45,5 +45,7 @@ int load_elf(void *elf, struct task_struct *task) {
             return -1;
         } 
     }
+
+    task->trap_frame->epc = ehdr->e_entry;
     return 0;
 }
