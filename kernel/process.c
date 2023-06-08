@@ -302,8 +302,8 @@ uint64 fork_process(struct task_struct *task) {
         kfree(task);
         return -1;
     }
-    push_tail(runnable_tasks, make_single_linked_list_node(new_task));
-    push_tail(all_tasks, make_single_linked_list_node(new_task));
+    push_tail(runnable_tasks, make_single_linked_list_node(child));
+    push_tail(all_tasks, make_single_linked_list_node(child));
     return child->pid;
 }
 
