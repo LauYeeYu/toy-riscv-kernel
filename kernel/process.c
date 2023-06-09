@@ -216,6 +216,7 @@ void scheduler() {
             struct single_linked_list_node *task_node = head_node(runnable_tasks);
             running_task = task_node;
             struct task_struct *task = task_node->data;
+            task->state = RUNNING;
             pop_head_without_free(runnable_tasks);
             switch_context(&now_context, &(task->context));
         }
@@ -238,6 +239,8 @@ struct single_linked_list_node *next_task_to_run() {
 void yield() {
     interrupt_off();
 #ifdef TOY_RISCV_KERNEL_PRINT_TASK
+    print_string("current task: ");
+    print_task_meta(current_task());
     print_all_task_meta();
 #endif
     deallocate(stack_to_remove, 0);
