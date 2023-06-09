@@ -26,6 +26,38 @@ pid_t next_pid = 1;
 void *stack_to_remove = NULL;
 void *stack_to_remove_next = NULL;
 
+#ifdef TOY_RISCV_KERNEL_PRINT_TASK
+void print_task_meta(struct task_struct *task) {
+    print_string("task: ");
+    print_string(task->name);
+    print_string(", pid: ");
+    print_int(task->pid, 10);
+    print_string(", parent: ");
+    if (task->parent == NULL) {
+        print_string("NULL");
+    } else {
+        print_int(task->parent->pid, 10);
+    }
+    switch (task->state) {
+        case RUNNING:
+            print_string(", state: RUNNING\n");
+            break;
+        case ZOMBIE:
+            print_string(", state: TASK_ZOMBIE\n");
+            break;
+        case SLEEPING:
+            print_string(", state: SLEEPING\n");
+            break;
+        case RUNNABLE:
+            print_string(", state: RUNNABLE\n");
+            break;
+        case DEAD:
+            print_string(", state: DEAD\n");
+            break;
+    }
+}
+#endif
+
 struct task_struct *new_task(const char *name, struct task_struct *parent) {
     int map_result = 0;
     struct task_struct *task = kmalloc(sizeof(struct task_struct));
@@ -78,6 +110,15 @@ struct task_struct *new_task(const char *name, struct task_struct *parent) {
     task->stack.size = 0;
     task->stack.start = 0;
     strcpy(task->name, name, min(31UL, strlen(name)));
+#ifdef TOY_RISCV_KERNEL_PRINT_TASK
+    print_string("new task: ");
+    print_string(task->name);
+    print_string(", pid: ");
+    print_int(task->pid, 10);
+    print_string(", at ");
+    print_int((uint64)task, 16);
+    print_string("\n");
+#endif
     task->shared_memory = shared_memory;
     return task;
 }
@@ -126,6 +167,17 @@ struct task_struct *current_task() {
     if (runnable_tasks == NULL) return NULL;
     return (struct task_struct *)(running_task->data);
 }
+
+#ifdef TOY_RISCV_KERNEL_PRINT_TASK
+void print_all_task_meta() {
+    for (struct single_linked_list_node *node = all_tasks->head;
+         node != NULL;
+         node = node->next) {
+        struct task_struct *task = node->data;
+        print_task_meta(task);
+    }
+}
+#endif
 
 extern char init_program[];
 
@@ -185,6 +237,9 @@ struct single_linked_list_node *next_task_to_run() {
 
 void yield() {
     interrupt_off();
+#ifdef TOY_RISCV_KERNEL_PRINT_TASK
+    print_all_task_meta();
+#endif
     deallocate(stack_to_remove, 0);
     stack_to_remove = stack_to_remove_next;
     stack_to_remove_next = NULL;
