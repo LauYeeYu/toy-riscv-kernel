@@ -43,7 +43,7 @@ void print_task_meta(struct task_struct *task) {
             print_string(", state: RUNNING\n");
             break;
         case ZOMBIE:
-            print_string(", state: TASK_ZOMBIE\n");
+            print_string(", state: ZOMBIE\n");
             break;
         case SLEEPING:
             print_string(", state: SLEEPING\n");
@@ -246,7 +246,7 @@ void yield() {
     struct context *old_context = &now_context;
     struct task_struct *task = current_task();
     if (runnable_tasks->size == 0) return;
-    if (task != NULL) {
+    if (task != NULL && task->state == RUNNING) {
         task->state = RUNNABLE;
         push_tail(runnable_tasks, running_task);
         old_context = &(task->context);
@@ -411,6 +411,7 @@ void exit_process(struct task_struct *task, int status) {
     if (task->parent->state == SLEEPING) {
         if (task->parent->channel == task->parent ||
             task->parent->channel == task) {
+            task->state = DEAD;
             task->parent->state = RUNNABLE;
             task->parent->trap_frame->a0 = task->pid;
             // save in a1 temporarily
@@ -420,6 +421,7 @@ void exit_process(struct task_struct *task, int status) {
         }
     }
     yield();
+    panic("exit_process: should not reach here\n");
 }
 
 uint64 exec_process(struct task_struct *task, const char *name,
