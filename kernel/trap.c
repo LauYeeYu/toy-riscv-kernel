@@ -108,19 +108,35 @@ void user_trap() {
             break;
         }
         case ILLEGAL_INSTRUCTION: {
-            print_string("Illegal instruction\n");
+            print_string("Illegal instruction at ");
+            print_int(read_stval(), 16);
+            print_string(", pid ");
+            print_int(task->pid, 10);
+            print_string("\n");
             exit_process(task, -1);
         }
         case INSTRUCTION_PAGE_FAULT: {
-            print_string("Instruction page fault\n");
+            print_string("Instruction page fault at ");
+            print_int(read_stval(), 16);
+            print_string(", pid ");
+            print_int(task->pid, 10);
+            print_string("\n");
             exit_process(task, -1);
         }
         case LOAD_PAGE_FAULT: {
-            print_string("Load page fault\n");
+            print_string("Load page fault at ");
+            print_int(read_stval(), 16);
+            print_string(", pid ");
+            print_int(task->pid, 10);
+            print_string("\n");
             exit_process(task, -1);
         }
         case STORE_PAGE_FAULT: {
-            print_string("Store page fault\n");
+            print_string("Store page fault at ");
+            print_int(read_stval(), 16);
+            print_string(", pid ");
+            print_int(task->pid, 10);
+            print_string("\n");
             exit_process(task, -1);
         }
         default:
