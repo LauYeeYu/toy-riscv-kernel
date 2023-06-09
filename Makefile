@@ -114,7 +114,7 @@ qemu: $U/bin/init $K/kernel
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
 .PHONY: qemu-gdb
-qemu-gdb: $K/kernel .gdbinit
+qemu-gdb: $U/bin/init $K/kernel .gdbinit
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
