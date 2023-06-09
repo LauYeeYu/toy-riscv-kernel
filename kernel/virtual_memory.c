@@ -286,7 +286,7 @@ int map_page_for_user(pagetable_t pagetable,
                       void *src,
                       size_t size,
                       uint64 permission) {
-    void *page = allocate(0);
+    void *page = allocate_for_user(0);
     if (page == NULL) return -1;
     memcpy(page, src, size);
     if (map_page(pagetable, va, (uint64)page, permission) != 0) {

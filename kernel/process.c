@@ -58,6 +58,13 @@ void print_task_meta(struct task_struct *task) {
 }
 #endif
 
+void *allocate_for_user(size_t power) {
+    void *addr = allocate(power);
+    if (addr == NULL) return NULL;
+    memset(addr, 0, PGSIZE << power);
+    return addr;
+}
+
 struct task_struct *new_task(const char *name, struct task_struct *parent) {
     int map_result = 0;
     struct task_struct *task = kmalloc(sizeof(struct task_struct));
@@ -66,9 +73,8 @@ struct task_struct *new_task(const char *name, struct task_struct *parent) {
     task->stack_permission = PTE_U | PTE_R | PTE_W;
     init_single_linked_list(&(task->mem_sections));
     task->pagetable = create_void_pagetable();
-    task->trap_frame = allocate(0);
-    void *shared_memory = allocate(0);
-    memset(task->trap_frame, 0, PGSIZE); // to avoid kernel memory leak
+    task->trap_frame = allocate_for_user(0);
+    void *shared_memory = allocate_for_user(0);
     memset(&(task->context), 0, sizeof(struct context));
     if (task->kernel_stack == NULL || task->pagetable == NULL ||
         shared_memory == NULL || task->trap_frame == NULL) {
@@ -189,7 +195,7 @@ void init_scheduler() {
         panic("init_scheduler: cannot create init task");
     }
     load_elf(init_program, init_task);
-    void *init_stack = allocate(0);
+    void *init_stack = allocate_for_user(0);
     if (init_stack == NULL) {
         panic("init_scheduler: cannot allocate init stack");
     }

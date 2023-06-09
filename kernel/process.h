@@ -115,6 +115,12 @@ struct task_struct {
 struct task_struct *current_task();
 
 /**
+ * Allocate a power of pages for the user process. This function will
+ * allocate the memory and clean it to 0.
+ */
+void *allocate_for_user(size_t power);
+
+/**
  * Create the task_struct for a new user process.
  * @param name the name of the process, only 31 characters are kept
  * @param parent the parent process, NULL if it is the init
