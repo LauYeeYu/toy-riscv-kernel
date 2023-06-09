@@ -168,7 +168,8 @@ void exit_process(struct task_struct *task, int status);
 
 uint64 exec_process(struct task_struct *task, const char *name,
                     char *const argv[]);
-
+void handle_load_page_fault(struct task_struct *task);
+void handle_store_page_fault(struct task_struct *task);
 #ifdef TOY_RISCV_KERNEL_TEST_SCHEDULER
 void test_scheduler();
 #endif // TOY_RISCV_KERNEL_TEST_SCHEDULER

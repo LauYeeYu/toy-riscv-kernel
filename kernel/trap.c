@@ -124,20 +124,10 @@ void user_trap() {
             exit_process(task, -1);
         }
         case LOAD_PAGE_FAULT: {
-            print_string("Load page fault at ");
-            print_int(read_stval(), 16);
-            print_string(", pid ");
-            print_int(task->pid, 10);
-            print_string("\n");
-            exit_process(task, -1);
+            handle_load_page_fault(task);
         }
         case STORE_PAGE_FAULT: {
-            print_string("Store page fault at ");
-            print_int(read_stval(), 16);
-            print_string(", pid ");
-            print_int(task->pid, 10);
-            print_string("\n");
-            exit_process(task, -1);
+            handle_store_page_fault(task);
         }
         default:
             break;

@@ -611,3 +611,62 @@ uint64 sys_yield(struct task_struct *task) {
     yield();
     return 0;
 }
+
+/** Trap handlers for specific causes */
+
+inline int within_stack_range(uint64 addr) {
+    return addr >= MIN_STACK_ADDR && addr < SHARED_MEMORY;
+}
+
+int enlarge_stack_by_a_page(struct task_struct *task) {
+    void *page = allocate_for_user(0);
+    if (page == NULL) return -1;
+    uint64 original_start = task->stack.start;
+    uint64 new_start = original_start - PGSIZE;
+    if (map_page(task->pagetable, new_start, (uint64)page,
+                 task->stack_permission) != 0) {
+        deallocate(page, 0);
+        return -1;
+    }
+    task->stack.start -= PGSIZE;
+    task->stack.size += PGSIZE;
+    return 0;
+}
+
+int try_enlarge_stack(struct task_struct *task, uint64 addr) {
+    if (within_stack_range(addr)) {
+        uint64 new_start = PGROUNDDOWN(addr);
+        if (new_start < task->stack.start) {
+            size_t times_of_enlargement =
+                (task->stack.start - new_start) / PGSIZE;
+            for (size_t i = 0; i < times_of_enlargement; i++) {
+                if (enlarge_stack_by_a_page(task) != 0) return -1;
+            }
+        }
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+void handle_load_page_fault(struct task_struct *task) {
+    uint64 addr = read_stval();
+    if (try_enlarge_stack(task, addr) == 0) return;
+    print_string("Load page fault at ");
+    print_int(addr, 16);
+    print_string(", pid ");
+    print_int(task->pid, 10);
+    print_string("\n");
+    exit_process(task, -1);
+}
+
+void handle_store_page_fault(struct task_struct *task) {
+    uint64 addr = read_stval();
+    if (try_enlarge_stack(task, addr) == 0) return;
+    print_string("Store page fault at ");
+    print_int(addr, 16);
+    print_string(", pid ");
+    print_int(task->pid, 10);
+    print_string("\n");
+    exit_process(task, -1);
+}
