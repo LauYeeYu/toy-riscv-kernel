@@ -72,6 +72,7 @@ $K/kernel: $(OBJS) $K/kernel.ld
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
+.PHONY: $U/bin/init
 $U/bin/init: $U/bin/$(init)
 	cp $< $U/bin/init
 
@@ -107,14 +108,14 @@ QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 
 .PHONY: qemu
-qemu: $U/bin/init $K/kernel
+qemu: clean $U/bin/init $K/kernel
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
 .PHONY: qemu-gdb
-qemu-gdb: $U/bin/init $K/kernel .gdbinit
+qemu-gdb: clean $U/bin/init $K/kernel .gdbinit
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
