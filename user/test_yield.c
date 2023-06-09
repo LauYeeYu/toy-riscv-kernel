@@ -1,5 +1,5 @@
 /*
- * Test the wait() system call.
+ * Test the yield() system call.
  * It should print '1', and fail if it prints '2'.
  * Then it will spin forever.
  */
