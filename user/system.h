@@ -38,4 +38,6 @@ void put_char(int character);
 
 char get_char();
 
+void yield();
+
 #endif // TOY_RISCV_KERNEL_USER_SYSTEM_H

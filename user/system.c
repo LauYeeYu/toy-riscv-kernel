@@ -8,6 +8,7 @@
 #define SYSCALL_SEND_SIGNAL 6
 #define SYSCALL_PUT_CHAR    7
 #define SYSCALL_GET_CHAR    8
+#define SYSCALL_YIELD       9
 
 #define PGSIZE 4096
 
@@ -116,6 +117,10 @@ void put_char(int character) {
 
 char get_char() {
     return (char)syscall(0, 0, 0, 0, 0, 0, 0, SYSCALL_GET_CHAR);
+}
+
+void yield() {
+    syscall(0, 0, 0, 0, 0, 0, 0, SYSCALL_YIELD);
 }
 
 int main(int argc, char *const argv[], char *const envp[]);

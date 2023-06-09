@@ -20,6 +20,7 @@ about the convention.
 | send_signal |  6 | Kill a process                      |
 |  put_char   |  7 | Put a character to screen           |
 |  get_char   |  8 | Get a character from keyboard       |
+|    yield    |  9 | Yield to other processes            |
 
 ## Convention
 
@@ -145,3 +146,10 @@ char get_char();
 
 Get a character from the terminal.
 
+### yield
+
+```c
+void yield();
+```
+
+Yield to other processes.
