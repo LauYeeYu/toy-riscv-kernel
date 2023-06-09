@@ -122,6 +122,9 @@ void *allocate_for_user(size_t power);
 
 /**
  * Create the task_struct for a new user process.
+ * Note: the struct only contains the core components of a process, and the
+ * other components, for example. the instructions, stack, and data, is not
+ * allocated in this function.
  * @param name the name of the process, only 31 characters are kept
  * @param parent the parent process, NULL if it is the init
  * @param src_memory the source address of the memory
