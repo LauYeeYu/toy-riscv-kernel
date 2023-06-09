@@ -407,7 +407,6 @@ void exit_process(struct task_struct *task, int status) {
     free_user_memory(task);
     task->state = ZOMBIE;
     task->exit_status = status;
-    task = NULL;
     for_each_node(all_tasks, reparent);
     if (task->parent->state == SLEEPING) {
         if (task->parent->channel == task->parent ||
