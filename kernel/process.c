@@ -144,6 +144,20 @@ int register_memory_section(struct task_struct *task, uint64 va, size_t size) {
     return 0;
 }
 
+int set_stack(struct task_struct *task) {
+    void *stack = allocate_for_user(0);
+    if (stack == NULL) return -1;
+    task->stack.start = SHARED_MEMORY - PGSIZE;
+    task->stack.size = PGSIZE;
+    task->trap_frame->sp = SHARED_MEMORY;
+    if (map_page(task->pagetable, SHARED_MEMORY - PGSIZE,
+                 (uint64)stack, task->stack_permission) != 0) {
+        deallocate(stack, 0);
+        return -1;
+    }
+    return 0;
+}
+
 void free_user_memory(struct task_struct *task) {
     pagetable_t pagetable = task->pagetable;
     stack_to_remove_next = task->kernel_stack;
@@ -195,16 +209,8 @@ void init_scheduler() {
         panic("init_scheduler: cannot create init task");
     }
     load_elf(init_program, init_task);
-    void *init_stack = allocate_for_user(0);
-    if (init_stack == NULL) {
-        panic("init_scheduler: cannot allocate init stack");
-    }
-    init_task->stack.start = SHARED_MEMORY - PGSIZE;
-    init_task->stack.size = PGSIZE;
-    init_task->trap_frame->sp = SHARED_MEMORY;
-    if (map_page(init_task->pagetable, SHARED_MEMORY - PGSIZE,
-                 (uint64)init_stack, PTE_R | PTE_W | PTE_U) != 0) {
-        panic("init_scheduler: cannot map init stack");
+    if (set_stack(init_task) != 0) {
+        panic("init_scheduler: cannot set stack for init task");
     }
 
     push_tail(all_tasks, make_single_linked_list_node(init_task));
