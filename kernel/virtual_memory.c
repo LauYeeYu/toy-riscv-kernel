@@ -64,6 +64,8 @@ void make_kernel_pagetable() {
     // Map components of kernel
     uint64 rw = PTE_R | PTE_W;
     uint64 rx = PTE_R | PTE_X;
+    // virt_test
+    kernel_map_pages(kernel_pagetable, VIRT_TEST, VIRT_TEST, PGSIZE, rw);
     // UART
     kernel_map_pages(kernel_pagetable, UART0, UART0, PGSIZE, rw);
     // virtio mmio disk interface

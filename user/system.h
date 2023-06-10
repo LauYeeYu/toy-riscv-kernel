@@ -34,10 +34,12 @@ pid_t wait_pid(pid_t pid, int *status);
 
 int send_signal(pid_t pid, int sig);
 
+void yield();
+
+int power_off();
+
 void put_char(int character);
 
 char get_char();
-
-void yield();
 
 #endif // TOY_RISCV_KERNEL_USER_SYSTEM_H

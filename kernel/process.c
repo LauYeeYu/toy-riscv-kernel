@@ -460,9 +460,10 @@ uint64 sys_exit(struct task_struct *task);
 uint64 sys_wait(struct task_struct *task);
 uint64 sys_wait_pid(struct task_struct *task);
 uint64 sys_send_signal(struct task_struct *task);
+uint64 sys_yield(struct task_struct *task);
+uint64 sys_power_off(struct task_struct *task);
 uint64 sys_put_char(struct task_struct *task);
 uint64 sys_get_char(struct task_struct *task);
-uint64 sys_yield(struct task_struct *task);
 
 #define SYSCALL_FORK        1
 #define SYSCALL_EXEC        2
@@ -470,9 +471,10 @@ uint64 sys_yield(struct task_struct *task);
 #define SYSCALL_WAIT        4
 #define SYSCALL_WAIT_PID    5
 #define SYSCALL_SEND_SIGNAL 6
-#define SYSCALL_PUT_CHAR    7
-#define SYSCALL_GET_CHAR    8
-#define SYSCALL_YIELD       9
+#define SYSCALL_YIELD       7
+#define SYSCALL_POWER_OFF   8
+#define SYSCALL_PUT_CHAR    9
+#define SYSCALL_GET_CHAR    10
 
 static uint64 (*syscalls[])(struct task_struct *) = {
     [SYSCALL_FORK]        = sys_fork,
@@ -481,9 +483,10 @@ static uint64 (*syscalls[])(struct task_struct *) = {
     [SYSCALL_WAIT]        = sys_wait,
     [SYSCALL_WAIT_PID]    = sys_wait_pid,
     [SYSCALL_SEND_SIGNAL] = sys_send_signal,
+    [SYSCALL_YIELD]       = sys_yield,
+    [SYSCALL_POWER_OFF]   = sys_power_off,
     [SYSCALL_PUT_CHAR]    = sys_put_char,
     [SYSCALL_GET_CHAR]    = sys_get_char,
-    [SYSCALL_YIELD]       = sys_yield,
 };
 
 void syscall() {
@@ -594,6 +597,17 @@ uint64 sys_send_signal(struct task_struct *task) {
     return signal;
 }
 
+uint64 sys_yield(struct task_struct *task) {
+    yield();
+    return 0;
+}
+
+uint64 sys_power_off(struct task_struct *task) {
+    if (task->pid != 1) return -1;
+    *(uint32 *)VIRT_TEST = 0x5555;
+    return 0;
+}
+
 uint64 sys_put_char(struct task_struct *task) {
     char c = (char)task->trap_frame->a0;
     print_char(c);
@@ -605,11 +619,6 @@ uint64 sys_get_char(struct task_struct *task) {
     while ((c = uart_getc()) == -1 && runnable_tasks->size > 0) yield();
     while ((c = uart_getc()) == -1) asm volatile("wfi");
     return c;
-}
-
-uint64 sys_yield(struct task_struct *task) {
-    yield();
-    return 0;
 }
 
 /** Trap handlers for specific causes */

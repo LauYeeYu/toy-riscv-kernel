@@ -6,9 +6,10 @@
 #define SYSCALL_WAIT        4
 #define SYSCALL_WAIT_PID    5
 #define SYSCALL_SEND_SIGNAL 6
-#define SYSCALL_PUT_CHAR    7
-#define SYSCALL_GET_CHAR    8
-#define SYSCALL_YIELD       9
+#define SYSCALL_YIELD       7
+#define SYSCALL_POWER_OFF   8
+#define SYSCALL_PUT_CHAR    9
+#define SYSCALL_GET_CHAR    10
 
 #define PGSIZE 4096
 
@@ -111,16 +112,20 @@ int send_signal(pid_t pid, int sig) {
                    SYSCALL_SEND_SIGNAL);
 }
 
+void yield() {
+    syscall(0, 0, 0, 0, 0, 0, 0, SYSCALL_YIELD);
+}
+
+int power_off() {
+    return syscall(0, 0, 0, 0, 0, 0, 0, SYSCALL_POWER_OFF);
+}
+
 void put_char(int character) {
     syscall((uint64)character, 0, 0, 0, 0, 0, 0, SYSCALL_PUT_CHAR);
 }
 
 char get_char() {
     return (char)syscall(0, 0, 0, 0, 0, 0, 0, SYSCALL_GET_CHAR);
-}
-
-void yield() {
-    syscall(0, 0, 0, 0, 0, 0, 0, SYSCALL_YIELD);
 }
 
 int main(int argc, char *const argv[], char *const envp[]);

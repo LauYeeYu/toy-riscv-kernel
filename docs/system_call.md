@@ -18,9 +18,10 @@ about the convention.
 |    wait     |  4 | Wait for any one of child processes |
 |  wait_pid   |  5 | Wait for a certain process          |
 | send_signal |  6 | Kill a process                      |
-|  put_char   |  7 | Put a character to screen           |
-|  get_char   |  8 | Get a character from keyboard       |
-|    yield    |  9 | Yield to other processes            |
+|    yield    |  7 | Yield to other processes            |
+|  power_off  |  8 | Power off the machine               |
+|  put_char   |  9 | Put a character to screen           |
+|  get_char   | 10 | Get a character from keyboard       |
 
 ## Convention
 
@@ -41,6 +42,8 @@ trampoline).
 - [wait](#wait)
 - [wait_pid](#wait_pid)
 - [send_signal](#send_signal)
+- [yield](#yield)
+- [power_off](#power_off)
 - [put_char](#put_char)
 - [get_char](#get_char)
 
@@ -130,6 +133,23 @@ must be positive and cannot be 1. The signal is specified by `sig`.
 
 Return 0 if succeed; -1 if failed.
 
+### yield
+
+```c
+void yield();
+```
+
+Yield to other processes.
+
+### power_off
+
+```c
+int power_off();
+```
+
+Power off the machine. This syscall can only be called by pid1 and will not
+return. If it is called by other processes, it will return -1.
+
 ### put_char
 
 ```c
@@ -145,11 +165,3 @@ char get_char();
 ```
 
 Get a character from the terminal.
-
-### yield
-
-```c
-void yield();
-```
-
-Yield to other processes.
