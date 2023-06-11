@@ -71,5 +71,5 @@
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
 #define SHARED_MEMORY (TRAMPOLINE - PGSIZE * 2)
 
-// The maximum size of stack is set to 1MiB.
+// The maximum size of stack is set to 4MiB.
 #define MIN_STACK_ADDR (SHARED_MEMORY - PGSIZE * 1024)
