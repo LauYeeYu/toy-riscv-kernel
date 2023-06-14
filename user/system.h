@@ -1,6 +1,8 @@
 #ifndef TOY_RISCV_KERNEL_USER_SYSTEM_H
 #define TOY_RISCV_KERNEL_USER_SYSTEM_H
 
+#include "stdbool.h"
+
 typedef unsigned int   uint;
 typedef unsigned short ushort;
 typedef unsigned char  uchar;
