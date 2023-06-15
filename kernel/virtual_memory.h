@@ -140,6 +140,7 @@ int map_page_for_user(pagetable_t pagetable,
 int map_section_for_user(pagetable_t pagetable,
                          uint64 va_start,
                          void *src,
+                         size_t src_size,
                          size_t size,
                          uint64 permission);
 

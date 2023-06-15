@@ -1,7 +1,7 @@
 #include "elf.h"
 
 #include <elf.h>
-
+#include "print.h"
 #include "process.h"
 #include "riscv.h"
 #include "riscv_defs.h"
@@ -32,7 +32,8 @@ int load_elf(void *elf, struct task_struct *task) {
 
         void *src_addr = (void *)((uint64)elf + phdr[i].p_offset);
         uint64 va = phdr[i].p_vaddr;
-        size_t size = phdr[i].p_filesz;
+        size_t size = phdr[i].p_memsz;
+        size_t src_size = phdr[i].p_filesz;
         size_t section_start = PGROUNDDOWN(va);
         size_t section_size = PGROUNDUP(va + size) - section_start;
 
@@ -43,7 +44,7 @@ int load_elf(void *elf, struct task_struct *task) {
         if (phdr[i].p_flags & PF_X) permission |= PTE_X;
         
         if (map_section_for_user(task->pagetable, va,
-                                 src_addr, size,
+                                 src_addr, src_size, size,
                                  permission) != 0) {
             return -1;
         }

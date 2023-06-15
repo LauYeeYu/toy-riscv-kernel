@@ -301,20 +301,23 @@ int map_page_for_user(pagetable_t pagetable,
 int map_section_for_user(pagetable_t pagetable,
                          uint64 va_start,
                          void *src,
+                         size_t src_size,
                          size_t size,
                          uint64 permission) {
     uint64 va_end = va_start + size;
+    uint64 src_end = va_start + src_size;
     uint8 *src_addr = (uint8 *)src;
     uint64 page_start = PGROUNDDOWN(va_start);
     for (uint64 page_addr = page_start;
          page_addr < va_end;
          page_addr += PGSIZE) {
         uint64 dest_start = max(va_start, page_addr);
-        uint64 dest_end = min(va_end, page_addr + PGSIZE);
+        uint64 dest_end = min(src_end, page_addr + PGSIZE);
+        size_t copy_size = dest_end > dest_start ? dest_end - dest_start : 0;
         if (map_page_for_user(pagetable,
                               dest_start,
                               src_addr,
-                              dest_end - dest_start,
+                              copy_size,
                               permission) != 0) {
             free_memory(pagetable, page_start, page_addr - page_start);
             return -1;
