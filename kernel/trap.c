@@ -108,7 +108,7 @@ void user_trap() {
             break;
         }
         case ILLEGAL_INSTRUCTION: {
-            print_string("Illegal instruction at ");
+            print_string("Illegal instruction: ");
             print_int(read_stval(), 16);
             print_string(", pid ");
             print_int(task->pid, 10);
