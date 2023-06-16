@@ -89,6 +89,15 @@ static inline int read_until(char *buffer, int max_length, char end) {
     int i = 0;
     while (i + 1 < max_length) {
         char c = get_char();
+        if (c == 127) {
+            if (i > 0) {
+                i--;
+                put_char('\b');
+                put_char(' ');
+                put_char('\b');
+            }
+            continue;
+        }
         put_char(c);
         buffer[i++] = c;
         if (c == end || c == '\0') {
