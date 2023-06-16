@@ -38,7 +38,7 @@ int execute_line(char *line) {
 
     // parse
     for (char *parameter = strtok(line, parameter_delimiters);
-         parameter != 0;
+         parameter != NULL;
          parameter = strtok(NULL, parameter_delimiters)) {
         if (path[0] == '\0') { // program name
             switch (program_type(parameter)) {
@@ -51,11 +51,10 @@ int execute_line(char *line) {
             }
             path[0] = '/';
             strcpy(path + 1, parameter, strlen(parameter));
-        } else { // program parameters
-            argv[argc] = parameter;
-            ++argc;
-            argv[argc] = NULL;
         }
+        argv[argc] = parameter;
+        ++argc;
+        argv[argc] = NULL;
     }
 
     // execute
