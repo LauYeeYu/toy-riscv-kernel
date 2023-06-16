@@ -108,15 +108,18 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 
+.PHONY: init
+init: $U/bin/sh $U/bin/echo $U/bin/init
+
 .PHONY: qemu
-qemu: clean $U/bin/init $K/kernel
+qemu: clean init $K/kernel
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
 .PHONY: qemu-gdb
-qemu-gdb: clean $U/bin/init $K/kernel .gdbinit
+qemu-gdb: clean init $K/kernel .gdbinit
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
