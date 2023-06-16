@@ -574,7 +574,8 @@ uint64 exec_process(struct task_struct *task, int argv_size, int envp_size) {
     }
     task->name[31] = '\0';
     interrupt_on();
-    return NULL;
+    user_trap_return();
+    panic("exec_process: should not reach here\n");
 }
 
 void sleep(struct task_struct *task, void *channel) {
