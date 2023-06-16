@@ -23,7 +23,7 @@ int print_unsigned_int(uint64 n) {
         put_char('0');
         return 1;
     }
-    int length = print_unsigned_int(n / 10);
+    int length = n >= 10 ? print_unsigned_int(n / 10) : 0;
     put_char('0' + n % 10);
     return length + 1;
 }
@@ -46,7 +46,7 @@ int print_int_hex_without_header(uint64 n) {
         put_char('0');
         return 1;
     }
-    int length = print_int_hex_without_header(n / 16);
+    int length = n >= 16 ? print_int_hex_without_header(n / 16) : 0;
     int digit = n % 16;
     if (digit < 10) {
         put_char('0' + digit);
@@ -58,10 +58,6 @@ int print_int_hex_without_header(uint64 n) {
 
 int print_int_hex(uint64 n) {
     print_string("0x");
-    if (n == 0) {
-        put_char('0');
-        return 1;
-    }
     int length = print_int_hex_without_header(n);
     return length + 2; // 2 for "0x"
 }
@@ -71,16 +67,14 @@ int print_int_oct_without_header(uint64 n) {
         put_char('0');
         return 1;
     }
-    int length = print_int_oct_without_header(n / 8);
+    int length = n >= 8 ? print_int_oct_without_header(n / 8) : 0;
     put_char('0' + n % 8);
     return length + 1;
 }
 
 int print_int_oct(uint64 n) {
-    if (n == 0) {
-        put_char('0');
-        return 1;
-    }
+    put_char('0');
+    if (n == 0) return 1;
     int length = print_int_oct_without_header(n);
     return length + 1; // 1 for "0"
 }
@@ -90,6 +84,8 @@ int print_int(int64 n, bool sign, int base) {
         return print_int_hex(n);
     } else if (base == 10) {
         return print_int_dec(n, sign);
+    } else if (base == 8) {
+        return print_int_oct(n);
     } else {
         return -1;
     }
