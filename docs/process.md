@@ -60,3 +60,16 @@ that software interrupt. The timer part is done in `timer_vector` in
 [kernel_vectors.S](../kernel/kernel_vectors.S); the software interrupt part is
 done `trap.c`, and then the context is switched in
 [process.c](../kernel/process.c).
+
+## Memory Management
+
+Every process has its own page table. The page table is stored in the
+`task_struct` structure. All memory section except user stack is registered
+in the `mem_sections` in `task_struct`.
+
+### User Stack
+
+Initially, the user stack is set to the highest virtual memory page with size
+of 4KB. When the user process traps into kernel, the kernel will check whether
+they are using the stack. If so, the kernel will allocate a new page for the
+user stack.
