@@ -53,6 +53,14 @@ static inline char *strtok(char *str, const char *delim) {
     return ret;
 }
 
+static inline int strcmp(const char *s1, const char *s2) {
+    while (*s1 != 0 && *s1 == *s2) {
+        s1++;
+        s2++;
+    }
+    return (int) ((unsigned char) *s1 - (unsigned char) *s2);
+}
+
 static inline void memcpy(void *dest, const void *src, size_t size) {
     for (size_t i = 0; i < size; i++) {
         ((char *)dest)[i] = ((char *)src)[i];
