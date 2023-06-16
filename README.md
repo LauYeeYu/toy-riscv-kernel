@@ -24,6 +24,8 @@ $ make qemu
 
 ### Test
 
+*If you want to run a program on this kernel, see [the document for user](docs/user.md) for more detail.*
+
 If you want to specify a certain program as the init program, you may
 put the prgram in `user/` directory and try:
 ```bash
