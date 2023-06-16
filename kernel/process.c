@@ -158,11 +158,10 @@ int set_stack(struct task_struct *task) {
     return 0;
 }
 
-void free_user_memory(struct task_struct *task) {
+void clear_user_memory_space(struct task_struct *task) {
     pagetable_t pagetable = task->pagetable;
     stack_to_remove_next = task->kernel_stack;
-    deallocate(task->trap_frame, 0);
-    deallocate(task->shared_memory, 0);
+
     for (struct single_linked_list_node *node = task->mem_sections.head;
          node != NULL;
          node = node->next) {
@@ -172,6 +171,13 @@ void free_user_memory(struct task_struct *task) {
     }
     free_memory(pagetable, task->stack.start, task->stack.size);
     clear_single_linked_list(&(task->mem_sections));
+}
+
+void free_user_memory(struct task_struct *task) {
+    pagetable_t pagetable = task->pagetable;
+    deallocate(task->trap_frame, 0);
+    deallocate(task->shared_memory, 0);
+    clear_user_memory_space(task);
     free_pagetable(pagetable);
 }
 
@@ -213,6 +219,20 @@ void print_all_task_meta() {
 #endif
 
 extern char init_program[];
+extern char sh[];
+extern char echo[];
+
+void *elf_file(const char *name) {
+    if (strcmp(name, "/init") == 0) {
+        return init_program;
+    } else if (strcmp(name, "/sh") == 0) {
+        return sh;
+    } else if (strcmp(name, "/echo") == 0) {
+        return echo;
+    } else {
+        return NULL;
+    }
+}
 
 void init_scheduler() {
     runnable_tasks = create_single_linked_list();
@@ -477,9 +497,83 @@ void exit_process(struct task_struct *task, int status) {
     panic("exit_process: should not reach here\n");
 }
 
-uint64 exec_process(struct task_struct *task, const char *name,
-                  char *const argv[]) {
-    // TODO
+uint64 exec_process(struct task_struct *task, int argv_size, int envp_size) {
+    interrupt_off();
+    char *ptr = task->shared_memory;
+    char *const name = ptr;
+    void *const elf = elf_file(name);
+    if (elf == NULL) return -1; // no such file
+
+    clear_user_memory_space(task);
+    memset(task->trap_frame, 0, PGSIZE);
+    while (*ptr != '\0') ptr++;
+    while (*ptr == '\0') ptr++;
+    char *argv = ptr;
+    char *arguments = ptr;
+    ptr += argv_size;
+    char *envp = ptr;
+    
+    if (load_elf(elf, task) || set_stack(task) != 0) {
+        exit_process(task, -1);
+    }
+    void *page = allocate_for_user(1);
+    if (page == NULL) {
+        exit_process(task, -1);
+    }
+    char *env = (char *)page;
+    memcpy(env, task->shared_memory, PGSIZE);
+    const uint64 va = available_from(task);
+    uint64 *const argv_ptr = (uint64 *)((uint64)page + PGSIZE);
+    uint64 *const envp_ptr = argv_ptr + argv_size + 1;
+    for (int i = 0; i < argv_size; i++) {
+        argv_ptr[i] = (uint64)va + ((uint64)argv - (uint64)task->shared_memory);
+        while (*argv != '\0') argv++;
+        while (*argv == '\0') argv++;
+    }
+    argv_ptr[argv_size] = NULL;
+    for (int i = 0; i < envp_size; i++) {
+        envp_ptr[i] = (uint64)va + ((uint64)envp - (uint64)task->shared_memory);
+        while (*envp != '\0') envp++;
+        while (*envp == '\0') envp++;
+    }
+    envp_ptr[envp_size] = NULL;
+
+    // Set the arguments for the new process
+    task->trap_frame->a0 = argv_size;
+    task->trap_frame->a1 = (uint64)va + ((uint64)argv - (uint64)env);
+    task->trap_frame->a2 = (uint64)va + ((uint64)envp - (uint64)env);
+
+    // Register and map the argv and envp
+    if (register_memory_section(task, va, PGSIZE * 2) != 0) {
+        exit_process(task, -1);
+    }
+    if (map_page(task->pagetable, va, (uint64)page,
+        PTE_R | PTE_W | PTE_U) != 0) {
+        exit_process(task, -1);
+    }
+    if (map_page(task->pagetable, va + PGSIZE, (uint64)page + PGSIZE,
+        PTE_R | PTE_W | PTE_U) != 0) {
+        exit_process(task, -1);
+    }
+
+    // change the name of the process
+    int arguments_count = 1;
+    for (int i = 0; i < 31; i++) {
+        task->name[i] = '\0';
+    }
+    for (int i = 0; i < 31; i++) {
+        if (*arguments != '\0') {
+            task->name[i] = *arguments;
+            arguments++;
+        } else {
+            arguments_count++;
+            if (arguments_count >= argv_size) break;
+            task->name[i] = ' ';
+            while (*arguments == '\0') arguments++;
+        }
+    }
+    task->name[31] = '\0';
+    interrupt_on();
     return NULL;
 }
 
@@ -548,8 +642,9 @@ uint64 sys_fork(struct task_struct *task) {
 }
 
 uint64 sys_exec(struct task_struct *task) {
-    // TODO
-    return NULL;
+    int argv_size = task->trap_frame->a3;
+    int envp_size = task->trap_frame->a4;
+    return exec_process(task, argv_size, envp_size);
 }
 
 uint64 sys_exit(struct task_struct *task) {
