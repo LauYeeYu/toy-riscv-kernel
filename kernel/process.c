@@ -528,20 +528,20 @@ uint64 exec_process(struct task_struct *task, int argv_size, int envp_size) {
     for (int i = 0; i < argv_size; i++) {
         argv_ptr[i] = (uint64)va + ((uint64)argv - (uint64)task->shared_memory);
         while (*argv != '\0') argv++;
-        while (*argv == '\0') argv++;
+        argv++;
     }
     argv_ptr[argv_size] = NULL;
     for (int i = 0; i < envp_size; i++) {
         envp_ptr[i] = (uint64)va + ((uint64)envp - (uint64)task->shared_memory);
         while (*envp != '\0') envp++;
-        while (*envp == '\0') envp++;
+        envp++;
     }
     envp_ptr[envp_size] = NULL;
 
     // Set the arguments for the new process
     task->trap_frame->a0 = argv_size;
-    task->trap_frame->a1 = (uint64)va + ((uint64)argv - (uint64)env);
-    task->trap_frame->a2 = (uint64)va + ((uint64)envp - (uint64)env);
+    task->trap_frame->a1 = (uint64)va + ((uint64)argv_ptr - (uint64)env);
+    task->trap_frame->a2 = (uint64)va + ((uint64)envp_ptr - (uint64)env);
 
     // Register and map the argv and envp
     if (register_memory_section(task, va, PGSIZE * 2) != 0) {
