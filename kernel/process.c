@@ -175,6 +175,19 @@ void free_user_memory(struct task_struct *task) {
     free_pagetable(pagetable);
 }
 
+uint64 available_from(struct task_struct *task) {
+    uint64 max = 0;
+    for (struct single_linked_list_node *node = task->mem_sections.head;
+         node != NULL;
+         node = node->next) {
+        struct memory_section *mem_section = node->data;
+        if (mem_section->start + mem_section->size > max) {
+            max = mem_section->start + mem_section->size;
+        }
+    }
+    return max;
+}
+
 /** Scheduler part */
 
 struct single_linked_list_node *running_task = NULL;
@@ -212,6 +225,31 @@ void init_scheduler() {
     if (set_stack(init_task) != 0) {
         panic("init_scheduler: cannot set stack for init task");
     }
+    void *page = allocate_for_user(1);
+    char *env = (char *)page;
+    char **vectors = (char **)((uint64)page + PGSIZE);
+    if (page == NULL) {
+        panic("init_scheduler: cannot allocate page for init task");
+    }
+    uint64 va = available_from(init_task);
+    if (register_memory_section(init_task, va, PGSIZE * 2) != 0) {
+        panic("init_scheduler: cannot register memory section for init task");
+    }
+    if (map_page(init_task->pagetable, va, (uint64)page,
+        PTE_R | PTE_W | PTE_U) != 0) {
+        panic("init_scheduler: cannot map page for init task");
+    }
+    if (map_page(init_task->pagetable, va + PGSIZE, (uint64)page + PGSIZE,
+        PTE_R | PTE_W | PTE_U) != 0) {
+        panic("init_scheduler: cannot map page for init task");
+    }
+    strcpy(env, "init", 5);
+    vectors[0] = (char *)va;
+    vectors[1] = NULL;
+    vectors[2] = NULL; // envp
+    init_task->trap_frame->a0 = 1; // argc
+    init_task->trap_frame->a1 = va + PGSIZE; // argv
+    init_task->trap_frame->a2 = va + PGSIZE + 2 * sizeof(char *); // envp
 
     push_tail(all_tasks, make_single_linked_list_node(init_task));
     push_tail(runnable_tasks, make_single_linked_list_node(init_task));
