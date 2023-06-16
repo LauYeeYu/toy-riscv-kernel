@@ -76,6 +76,14 @@ Copy a string.
 char *strcpy(char *dest, const char *src, size_t size);
 ```
 
+### string_includes
+
+Check if a string includes a character.
+
+```c
+static inline bool string_includes(const char *s, char c);
+```
+
 ### strtok
 
 Split a string into tokens.

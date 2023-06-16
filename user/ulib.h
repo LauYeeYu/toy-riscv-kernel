@@ -55,6 +55,16 @@ static inline void strcpy(char *dest, const char *src, size_t size) {
     dest[size] = '\0';
 }
 
+static inline bool string_includes(const char *s, char c) {
+    while (*s != '\0') {
+        if (*s == c) {
+            return true;
+        }
+        s++;
+    }
+    return false;
+}
+
 static inline char *strtok(char *str, const char *delim) {
     static char *last = NULL;
     if (str != NULL) {
@@ -63,19 +73,20 @@ static inline char *strtok(char *str, const char *delim) {
     if (last == NULL) {
         return NULL;
     }
+    while (*last != '\0' && string_includes(delim, *last)) {
+        last++;
+    }
     char *ret = last;
     while (*last != '\0') {
-        for (size_t i = 0; delim[i] != '\0'; i++) {
-            if (*last == delim[i]) {
-                *last = '\0';
-                last++;
-                return ret;
-            }
+        if (string_includes(delim, *last)) {
+            *last = '\0';
+            last++;
+            return ret;
         }
         last++;
     }
     last = NULL;
-    return ret;
+    return ret[0] == '\0' ? NULL : ret;
 }
 
 /**
