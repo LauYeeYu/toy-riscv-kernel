@@ -4,6 +4,7 @@
 #define MAX_LINE_LENGTH 4096
 
 enum builtin {
+    HELP,
     EXIT,
     POWEROFF,
     NON_BUILTIN
@@ -18,7 +19,9 @@ char argv_buffer[4096];
 char *tmp_argv[4096];
 
 enum builtin program_type(char *program) {
-    if (strcmp(program, "exit") == 0) {
+    if (strcmp(program, "help") == 0) {
+        return HELP;
+    } else if (strcmp(program, "exit") == 0) {
         return EXIT;
     } else if (strcmp(program, "poweroff") == 0) {
         return POWEROFF;
@@ -37,18 +40,12 @@ int execute_line(char *line) {
     }
 
     // parse
+    enum builtin builtin = NON_BUILTIN;
     for (char *parameter = strtok(line, parameter_delimiters);
          parameter != NULL;
          parameter = strtok(NULL, parameter_delimiters)) {
         if (path[0] == '\0') { // program name
-            switch (program_type(parameter)) {
-                case EXIT:
-                    exit(0);
-                case POWEROFF:
-                    return power_off();
-                case NON_BUILTIN:
-                    break;
-            }
+            builtin = program_type(parameter);
             path[0] = '/';
             strcpy(path + 1, parameter, strlen(parameter));
         }
@@ -58,16 +55,35 @@ int execute_line(char *line) {
     }
 
     // execute
-    if (path[0] != '\0') {
-        int pid = fork();
-        if (pid == 0) {
-            exec(path, argv, program_envp);
-            printf("execve failed!\n");
-            exit(-1);
-        } else {
-            int exit_code;
-            wait(&exit_code);
-            return exit_code;
+    switch (builtin) {
+        case HELP: {
+            print_string("help:     print this message\n");
+            print_string("exit:     exit shell\n");
+            print_string("poweroff: power off\n");
+            break;
+        }
+        case EXIT: {
+            exit(0);
+            break;
+        }
+        case POWEROFF: {
+            power_off();
+            break;
+        }
+        case NON_BUILTIN: {
+            if (path[0] != '\0') {
+                int pid = fork();
+                if (pid == 0) {
+                    exec(path, argv, program_envp);
+                    printf("execve failed!\n");
+                    exit(-1);
+                } else {
+                    int exit_code;
+                    wait(&exit_code);
+                    return exit_code;
+                }
+            }
+            break;
         }
     }
     return 0;
