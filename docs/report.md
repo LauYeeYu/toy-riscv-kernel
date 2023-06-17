@@ -125,7 +125,7 @@ void init_mem_manage() {
 
 *物理内存管理见上一节*
 
-虚拟内存管理位于 `kernel/virtual_memory.c` 中，采用的是三级页表。可以使用 `create_void_pagetable` 创建一个空的页表，使用 `map_page` 将一个虚拟页映射到一个物理页，使用 `unmap_page` 将一个虚拟页取消映射。
+虚拟内存管理位于 `kernel/virtual_memory.c` 中，采用的是三级页表，支持页表创建、查找、分配、释放。可以使用 `create_void_pagetable` 创建一个空的页表，使用 `map_page` 将一个虚拟页映射到一个物理页，使用 `unmap_page` 将一个虚拟页取消映射。
 
 `kernel/virtual_memory.c` 提供了多个函数用于方便地进行内存操作，具体参见 `kernel/virtual_memory.h` 中的声明。
 
